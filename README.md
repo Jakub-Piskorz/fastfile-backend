@@ -124,5 +124,5 @@ Used only in Integration tests:
 
 ## 🛠️ Configuring HTTPS
 
-Put `keystore.jks` file inside `src/main/resources/` folder and add `var_keystorePass` as your keystore password to environment variables
+Put `keystore.p12` file inside `src/main/resources/` folder and add `var_keystorePass` as your keystore password to environment variables
 
