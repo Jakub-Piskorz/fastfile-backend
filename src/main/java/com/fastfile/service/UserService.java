@@ -1,13 +1,19 @@
 package com.fastfile.service;
 
+import com.fastfile.dto.UserDTO;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.regex.Pattern;
+
+import static com.fastfile.service.FileService.FILES_ROOT;
 
 @Service
 public class UserService {
@@ -26,9 +32,11 @@ public class UserService {
     @Value("${storage.limits.premium}")
     private long premiumLimit;
 
-    public User register(User user) {
+    public UserDTO register(User user) throws IOException {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        Files.createDirectories(Paths.get(FILES_ROOT + "/" + user.getId()));
+        return new UserDTO(user);
     }
 
     public User getMe() {

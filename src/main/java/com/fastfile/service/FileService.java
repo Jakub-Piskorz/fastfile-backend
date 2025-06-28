@@ -102,7 +102,7 @@ public class FileService {
     }
 
     Path getMyUserPath() {
-        return getMyUserPath(null);
+        return getMyUserPath("");
     }
 
     long bytesInside(Path path) throws IOException {
@@ -233,7 +233,6 @@ public class FileService {
             return false;
         }
     }
-
 
     @SneakyThrows
     public boolean deleteRecursively(String directory) {
