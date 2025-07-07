@@ -36,13 +36,12 @@ public class AuthControllerIT {
 
     @Test
     public void userAuthIT() {
-        User user = restTemplate.postForObject(
+        UserDTO user = restTemplate.postForObject(
                 "/auth/register",
                 new User(env.ffUsername(), "test@test.com", "testFirstname", "testLastname", env.ffPassword()),
-                User.class);
+                UserDTO.class);
         assertThat(user).isNotNull();
         assertThat(user.getId()).isNotNull();
-        assertThat(user.getPassword()).isNotNull();
         assertThat(user.getEmail()).isNotNull();
         assertThat(user.getFirstName()).isNotNull();
         assertThat(user.getLastName()).isNotNull();
