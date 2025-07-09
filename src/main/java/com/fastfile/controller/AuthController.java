@@ -2,7 +2,7 @@ package com.fastfile.controller;
 
 import com.fastfile.dto.UserDTO;
 import com.fastfile.dto.UserTypeDTO;
-import com.fastfile.model.UserLogin;
+import com.fastfile.dto.UserLoginDTO;
 
 import com.fastfile.model.User;
 import com.fastfile.service.AuthService;
@@ -31,7 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody UserLogin user) {
+    public String login(@RequestBody UserLoginDTO user) {
         return authService.authenticate(user.login(), user.password());
     }
     @GetMapping("/user")

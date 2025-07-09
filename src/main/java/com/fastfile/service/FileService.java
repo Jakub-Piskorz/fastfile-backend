@@ -213,13 +213,12 @@ public class FileService {
     }
 
     public Iterable<FileMetadataDTO> searchFiles(SearchFileDTO searchFile) throws IOException {
-        if (searchFile.getFileName() == null || searchFile.getFileName().isEmpty()) {
+        if (searchFile.fileName() == null || searchFile.fileName().isEmpty()) {
             throw new IllegalArgumentException("File name is empty");
         }
-        if (searchFile.getDirectory() == null) searchFile.setDirectory("");
-        Stream<Path> walkStream = Files.walk(getMyUserPath(searchFile.getDirectory()));
+        Stream<Path> walkStream = Files.walk(getMyUserPath(searchFile.directory() == null ? "" : searchFile.directory()));
         // Skip(1), because it starts the list with itself (directory)
-        Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(searchFile.getFileName()));
+        Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(searchFile.fileName()));
         var filesMetadata = getFilesMetadata(filteredWalkStream);
         walkStream.close();
         return filesMetadata;

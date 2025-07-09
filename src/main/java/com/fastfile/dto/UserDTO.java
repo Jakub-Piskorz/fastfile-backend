@@ -1,27 +1,10 @@
 package com.fastfile.dto;
 
 import com.fastfile.model.User;
-import lombok.*;
 
-@Getter
-@Setter
-@AllArgsConstructor
-public class UserDTO {
-    private Long id;
-    private String username;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private String userType;
-    private long usedStorage;
-
+public record UserDTO(Long id, String username, String email, String firstName, String lastName, String userType,
+                      long usedStorage) {
     public UserDTO(User user) {
-        this.id = user.getId();
-        this.username = user.getUsername();
-        this.email = user.getEmail();
-        this.firstName = user.getFirstName();
-        this.lastName = user.getLastName();
-        this.userType = user.getUserType();
-        this.usedStorage = user.getUsedStorage();
+        this(user.getId(), user.getUsername(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getUserType(), user.getUsedStorage());
     }
 }

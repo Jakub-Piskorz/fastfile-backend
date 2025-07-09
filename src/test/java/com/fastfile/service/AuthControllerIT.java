@@ -3,7 +3,7 @@ package com.fastfile.service;
 import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.UserDTO;
 import com.fastfile.model.User;
-import com.fastfile.model.UserLogin;
+import com.fastfile.dto.UserLoginDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,13 +41,13 @@ public class AuthControllerIT {
                 new User(env.ffUsername(), "test@test.com", "testFirstname", "testLastname", env.ffPassword()),
                 UserDTO.class);
         assertThat(user).isNotNull();
-        assertThat(user.getId()).isNotNull();
-        assertThat(user.getEmail()).isNotNull();
-        assertThat(user.getFirstName()).isNotNull();
-        assertThat(user.getLastName()).isNotNull();
+        assertThat(user.id()).isNotNull();
+        assertThat(user.email()).isNotNull();
+        assertThat(user.firstName()).isNotNull();
+        assertThat(user.lastName()).isNotNull();
 
-        UserLogin userLogin = new UserLogin(env.ffUsername(), env.ffPassword());
-        String jwtToken = restTemplate.postForObject("/auth/login", userLogin, String.class);
+        UserLoginDTO userLoginDTO = new UserLoginDTO(env.ffUsername(), env.ffPassword());
+        String jwtToken = restTemplate.postForObject("/auth/login", userLoginDTO, String.class);
         assertThat(jwtToken.length()).isGreaterThan(0);
 
 
@@ -59,9 +59,28 @@ public class AuthControllerIT {
         UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, requestEntity, UserDTO.class).getBody();
         assertThat(userDTO).isNotNull();
         assert userDTO != null;
-        assertThat(userDTO.getId()).isEqualTo(user.getId());
-        assertThat(userDTO.getEmail()).isEqualTo(user.getEmail());
-        assertThat(userDTO.getFirstName()).isEqualTo(user.getFirstName());
-        assertThat(userDTO.getLastName()).isEqualTo(user.getLastName());
+        assertThat(userDTO.id()).isEqualTo(user.id());
+        assertThat(userDTO.email()).isEqualTo(user.email());
+        assertThat(userDTO.firstName()).isEqualTo(user.firstName());
+        assertThat(userDTO.lastName()).isEqualTo(user.lastName());
+    }
+
+    @Test
+    public void testUserLoginIT() {
+        UserLoginDTO userLoginDTO = new UserLoginDTO("testUser", "secretPassword");
+        String jwtToken = restTemplate.postForObject("/auth/login", userLoginDTO, String.class);
+        assertThat(jwtToken).isNotNull();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + jwtToken);
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, requestEntity, UserDTO.class).getBody();
+        assertThat(userDTO).isNotNull();
+        assert userDTO != null;
+
+        assertThat(userDTO.email()).isEqualTo("example@example.com");
+        assertThat(userDTO.firstName()).isEqualTo("testFirstname");
+        assertThat(userDTO.lastName()).isEqualTo("testLastname");
     }
 }
