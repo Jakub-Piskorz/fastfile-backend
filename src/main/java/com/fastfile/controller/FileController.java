@@ -85,11 +85,11 @@ public class FileController {
     @GetMapping("/create-directory/**")
     public ResponseEntity<String> createDirectory(HttpServletRequest request) throws Exception {
         var filePath = decodeURL(request, "/create-directory/");
-        boolean result = fileService.createDirectory(filePath);
-        if (result) {
+        String errorMsg = fileService.createDirectory(filePath);
+        if (errorMsg == null) {
             return new ResponseEntity<>("Successfully created directory.", HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Couldn't create directory.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(errorMsg, HttpStatus.BAD_REQUEST);
         }
     }
 

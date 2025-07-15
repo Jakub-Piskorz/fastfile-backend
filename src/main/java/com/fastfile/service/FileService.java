@@ -176,17 +176,16 @@ public class FileService {
         return filesInDirectory(directory, 1);
     }
 
-    public String createDirectory(String path, String dirName) throws IOException {
-        String errorMsg = null;
+    public String createDirectory(String path) throws IOException {
+        String errorMsg;
         Path pathForDir = getMyUserPath(path);
         // Check if path exists
         if (Files.exists(pathForDir)) {
-            errorMsg = "Directory already exists"
+            errorMsg = "Directory already exists";
             return errorMsg;
         }
-        Path finalPath = pathForDir.resolve(dirName);
-        Files.createDirectories(finalPath);
-        return errorMsg;
+        Files.createDirectories(pathForDir);
+        return null;
     }
 
     public ResponseEntity<InputStreamResource> downloadFile(String directory) throws IOException {
@@ -235,15 +234,6 @@ public class FileService {
         var filesMetadata = getFilesMetadata(filteredWalkStream);
         walkStream.close();
         return filesMetadata;
-    }
-
-    public boolean createDirectory(String path) throws IOException {
-        if (path != null && !Files.exists(getMyUserPath(path))) {
-            Files.createDirectories(getMyUserPath(path));
-            return true;
-        } else {
-            return false;
-        }
     }
 
     @SneakyThrows
