@@ -176,6 +176,19 @@ public class FileService {
         return filesInDirectory(directory, 1);
     }
 
+    public String createDirectory(String path, String dirName) throws IOException {
+        String errorMsg = null;
+        Path pathForDir = getMyUserPath(path);
+        // Check if path exists
+        if (Files.exists(pathForDir)) {
+            errorMsg = "Directory already exists"
+            return errorMsg;
+        }
+        Path finalPath = pathForDir.resolve(dirName);
+        Files.createDirectories(finalPath);
+        return errorMsg;
+    }
+
     public ResponseEntity<InputStreamResource> downloadFile(String directory) throws IOException {
         Path filePath = getMyUserPath(directory);
 
