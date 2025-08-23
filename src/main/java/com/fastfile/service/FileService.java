@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -277,5 +278,25 @@ public class FileService {
         sharedFile.setOwner(me);
         sharedFileRepository.save(sharedFile);
         return sharedFile;
+    }
+    public Set<FileMetadataDTO> filesSharedByMe() throws IOException {
+        User me = userService.getMe();
+        Set<String> filePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
+        Set<FileMetadataDTO> filesMetadata = new HashSet<>();
+        for (String filePath : filePaths) {
+            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(filePath)));
+        }
+        return filesMetadata;
+    }
+    public Set<FileMetadataDTO> filesSharedToMe() throws IOException {
+        User me = userService.getMe();
+        Set<String> filePaths = sharedFileRepository.findFilePathsSharedTo(me.getId());
+        Set<FileMetadataDTO> filesMetadata = new HashSet<>();
+        for (String filePath : filePaths) {
+            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(filePath)));
+            // TODO: paths are not from my path but paths of different users sharing me files.
+            // Maybe sharedFile paths need to include user paths. If so, it needs refactoring.
+        }
+        return filesMetadata;
     }
 }

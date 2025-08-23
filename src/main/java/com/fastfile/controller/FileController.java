@@ -102,4 +102,24 @@ public class FileController {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
+
+    @GetMapping("/shared-by-me")
+    public ResponseEntity<Set<FileMetadataDTO>> filesSharedByMe() throws Exception {
+         Set<FileMetadataDTO> files = fileService.filesSharedByMe();
+        if (files != null) {
+            return new ResponseEntity<>(files, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/shared-to-me")
+    public ResponseEntity<Set<FileMetadataDTO>> filesSharedToMe() throws Exception {
+        Set<FileMetadataDTO> files = fileService.filesSharedToMe();
+        if (files != null) {
+            return new ResponseEntity<>(files, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
 }
