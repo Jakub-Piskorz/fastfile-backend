@@ -40,8 +40,8 @@ public class UserService {
     }
 
     public User getMe() {
-        var myUserId = authService.getMyUserId();
-        return userRepository.findById(Long.parseLong(myUserId)).orElse(null);
+        Long myUserId = authService.getMyUserId();
+        return userRepository.findById(myUserId).orElse(null);
     }
 
     public long getMyUserStorageLimit() {
@@ -62,9 +62,8 @@ public class UserService {
         return true;
     }
 
-    public long getMyUserStorage() {
+    public long getMyUsedStorage() {
         User me = getMe();
-
         if (me == null) {
             throw new RuntimeException("User not found");
         }

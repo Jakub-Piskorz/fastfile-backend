@@ -49,13 +49,8 @@ public class FileService {
 
     FileMetadataDTO getFileMetadata(Path path) throws IOException {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
-        return new FileMetadataDTO(
-                path.getFileName().toString(),
-                Files.size(path),
-                attrs.lastModifiedTime().toMillis(),
-                Files.isDirectory(path) ? "directory" : "file",  // Type
-                path.toString()
-        );
+        return new FileMetadataDTO(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
+                path.toString());
     }
 
     Set<FileMetadataDTO> getFilesMetadata(Stream<Path> pathStream) {
@@ -98,7 +93,7 @@ public class FileService {
             }
         }
 
-        String userId = authService.getMyUserId();
+        Long userId = authService.getMyUserId();
         return Paths.get(FILES_ROOT + userId + "/" + directory);
     }
 
@@ -111,14 +106,12 @@ public class FileService {
             return path.toFile().length();
         }
         try (Stream<Path> stream = Files.walk(path)) {
-            return stream.filter(p -> p.toFile().isFile())
-                    .mapToLong(p -> p.toFile().length())
-                    .sum();
+            return stream.filter(p -> p.toFile().isFile()).mapToLong(p -> p.toFile().length()).sum();
         }
     }
 
     boolean isMyStorageLimitExceeded(long newFileSize) {
-        long currentUsage = userService.getMyUserStorage();
+        long currentUsage = userService.getMyUsedStorage();
         return (currentUsage + newFileSize) > userService.getMyUserStorageLimit();
     }
 
@@ -213,10 +206,7 @@ public class FileService {
         headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         headers.add(HttpHeaders.EXPIRES, "0");
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentType(MediaType.parseMediaType(contentType))
-                .body(resource);
+        return ResponseEntity.ok().headers(headers).contentType(MediaType.parseMediaType(contentType)).body(resource);
     }
 
     public void delete(String filePath) throws IOException, NullPointerException {
@@ -279,23 +269,23 @@ public class FileService {
         sharedFileRepository.save(sharedFile);
         return sharedFile;
     }
-    public Set<FileMetadataDTO> filesSharedByMe() throws IOException {
+
+    public Set<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
         User me = userService.getMe();
-        Set<String> filePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
+        Set<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
         Set<FileMetadataDTO> filesMetadata = new HashSet<>();
-        for (String filePath : filePaths) {
-            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(filePath)));
+        for (String sharedFilePath : sharedFilePaths) {
+            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
         }
         return filesMetadata;
     }
+
     public Set<FileMetadataDTO> filesSharedToMe() throws IOException {
         User me = userService.getMe();
-        Set<String> filePaths = sharedFileRepository.findFilePathsSharedTo(me.getId());
+        Set<SharedFile> sharedFiles = sharedFileRepository.findFilesSharedTo(me.getId());
         Set<FileMetadataDTO> filesMetadata = new HashSet<>();
-        for (String filePath : filePaths) {
-            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(filePath)));
-            // TODO: paths are not from my path but paths of different users sharing me files.
-            // Maybe sharedFile paths need to include user paths. If so, it needs refactoring.
+        for (SharedFile sharedFile : sharedFiles) {
+            filesMetadata.add(getFileMetadata(Paths.get(FILES_ROOT + sharedFile.getOwnerId() + "/" + sharedFile.getPath())));
         }
         return filesMetadata;
     }

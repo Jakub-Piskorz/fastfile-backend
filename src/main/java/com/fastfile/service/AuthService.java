@@ -41,9 +41,9 @@ public class AuthService {
         return jwtService.generateToken(user);
     }
 
-    public String getMyUserId() {
+    public Long getMyUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Claims claims = (Claims) auth.getDetails();
-        return String.valueOf(claims.get("userId"));
+        return Long.parseLong(String.valueOf(claims.get("userId")));
     }
 }

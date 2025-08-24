@@ -13,8 +13,8 @@ public interface SharedFileRepository extends JpaRepository<SharedFile, SharedFi
     @Query("SELECT DISTINCT sf.owner FROM SharedFile sf WHERE sf.sharedUser.id = :userId")
     Set<User> findUsersSharingFilesTo(Long userId);
 
-    @Query("SELECT sf.id.path FROM SharedFile sf WHERE sf.sharedUser.id = :userId")
-    Set<String> findFilePathsSharedTo(Long userId);
+    @Query("SELECT DISTINCT sf FROM SharedFile sf WHERE sf.sharedUser.id = :userId")
+    Set<SharedFile> findFilesSharedTo(Long userId);
 
     @Query("SELECT sf.id.path FROM SharedFile sf WHERE sf.owner.id = :userId")
     Set<String> findFilePathsSharedBy(Long userId);
