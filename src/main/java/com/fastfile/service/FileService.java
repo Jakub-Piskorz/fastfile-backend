@@ -4,11 +4,14 @@ import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.model.SharedFile;
 import com.fastfile.model.SharedFileKey;
+import com.fastfile.model.SharedGlobalFile;
 import com.fastfile.model.User;
 import com.fastfile.repository.SharedFileRepository;
+import com.fastfile.repository.SharedGlobalFileRepository;
 import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,12 +39,15 @@ public class FileService {
     private final UserService userService;
     private final UserRepository userRepository;
     private final SharedFileRepository sharedFileRepository;
+    private final SharedGlobalFileRepository sharedGlobalFileRepository;
 
-    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository) {
+
+    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, SharedGlobalFileRepository sharedGlobalFileRepository) {
         this.authService = authService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.sharedFileRepository = sharedFileRepository;
+        this.sharedGlobalFileRepository = sharedGlobalFileRepository;
     }
 
     FileMetadataDTO getFileMetadata(Path path) throws IOException {
@@ -270,6 +273,27 @@ public class FileService {
         return sharedFile;
     }
 
+    public SharedGlobalFile shareGlobalFile(String filePath) {
+        User me = userService.getMe();
+        SharedGlobalFile file;
+
+        int attempts = 0;
+        do {
+            UUID randomUUID = UUID.randomUUID();
+            file = new SharedGlobalFile(randomUUID, me, filePath);
+            try {
+                return sharedGlobalFileRepository.save(file);
+            } catch (DataIntegrityViolationException e) {
+                // UUID collision, try again
+                attempts++;
+                if (attempts > 5) {
+                    throw new RuntimeException("Failed to generate unique UUID", e);
+                }
+            }
+        } while (true);
+    }
+
+    // TODO: file path sharing
     public Set<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
         User me = userService.getMe();
         Set<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
@@ -278,6 +302,10 @@ public class FileService {
             filesMetadata.add(getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
         }
         return filesMetadata;
+    }
+
+    public Set<FileMetadataDTO> filesSharedByMe() throws IOException {
+        return filesSharedByMe("");
     }
 
     public Set<FileMetadataDTO> filesSharedToMe() throws IOException {

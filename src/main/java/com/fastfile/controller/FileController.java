@@ -4,6 +4,7 @@ import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.dto.ShareFileDTO;
 import com.fastfile.model.SharedFile;
+import com.fastfile.model.SharedGlobalFile;
 import com.fastfile.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.InputStreamResource;
@@ -103,9 +104,14 @@ public class FileController {
         }
     }
 
+    @PostMapping("/share-global")
+    public ResponseEntity<SharedGlobalFile> shareGlobalFile(@RequestBody String filePath) {
+        return ResponseEntity.ok(fileService.shareGlobalFile(filePath));
+    }
+
     @GetMapping("/shared-by-me")
     public ResponseEntity<Set<FileMetadataDTO>> filesSharedByMe() throws Exception {
-         Set<FileMetadataDTO> files = fileService.filesSharedByMe();
+        Set<FileMetadataDTO> files = fileService.filesSharedByMe();
         if (files != null) {
             return new ResponseEntity<>(files, HttpStatus.OK);
         } else {
