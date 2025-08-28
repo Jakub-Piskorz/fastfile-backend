@@ -12,23 +12,16 @@ import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -40,45 +33,16 @@ public class FileService {
     private final UserRepository userRepository;
     private final SharedFileRepository sharedFileRepository;
     private final FileLinkRepository fileLinkRepository;
+    private final FileSystemService fileSystemService;
 
 
-    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, FileLinkRepository fileLinkRepository) {
+    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService) {
         this.authService = authService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.sharedFileRepository = sharedFileRepository;
         this.fileLinkRepository = fileLinkRepository;
-    }
-
-    FileMetadataDTO getFileMetadata(Path path) throws IOException {
-        var attrs = Files.readAttributes(path, BasicFileAttributes.class);
-        return new FileMetadataDTO(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
-                path.toString());
-    }
-
-    Set<FileMetadataDTO> getFilesMetadata(Stream<Path> pathStream) {
-        return pathStream.map(_path -> {
-            try {
-                return getFileMetadata(_path);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }).collect(Collectors.toSet());
-    }
-
-    String getFileExtension(String fileName) {
-        int i = fileName.lastIndexOf('.');
-        return (i > 0) ? fileName.substring(i + 1) : "";
-    }
-
-    String getContentTypeFromExtension(String extension) {
-        return switch (extension.toLowerCase()) {
-            case "pdf" -> "application/pdf";
-            case "jpg" -> "image/jpeg";
-            case "png" -> "image/png";
-            case "txt" -> "text/plain";
-            default -> "application/octet-stream";
-        };
+        this.fileSystemService = fileSystemService;
     }
 
     Path getMyUserPath(String directory) {
@@ -160,17 +124,17 @@ public class FileService {
         return true;
     }
 
-    public Set<FileMetadataDTO> filesInDirectory(String directory, int maxDepth) throws IOException {
+    public Set<FileMetadataDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
         Path path = getMyUserPath(directory);
 
         Stream<Path> walkStream = Files.walk(path, maxDepth).skip(1);
-        Set<FileMetadataDTO> filesMetadata = getFilesMetadata(walkStream);
+        Set<FileMetadataDTO> filesMetadata = fileSystemService.getFilesMetadata(walkStream);
         walkStream.close();
         return filesMetadata;
     }
 
-    public Set<FileMetadataDTO> filesInDirectory(String directory) throws IOException {
-        return filesInDirectory(directory, 1);
+    public Set<FileMetadataDTO> filesInMyDirectory(String directory) throws IOException {
+        return filesInMyDirectory(directory, 1);
     }
 
     public String createDirectory(String path) throws IOException {
@@ -188,28 +152,12 @@ public class FileService {
     public ResponseEntity<InputStreamResource> downloadFile(String directory) throws IOException {
         Path filePath = getMyUserPath(directory);
 
-        if (!Files.exists(filePath)) {
+        var file = fileSystemService.prepareFileForDownload(filePath);
+        if (file == null) {
             return ResponseEntity.notFound().build();
         }
 
-        InputStream inputStream = Files.newInputStream(filePath);
-        InputStreamResource resource = new InputStreamResource(inputStream);
-
-        String contentType = Files.probeContentType(filePath);
-        if (contentType == null) {
-            String fileExtension = getFileExtension(filePath.getFileName().toString());
-            contentType = getContentTypeFromExtension(fileExtension);
-        }
-
-        // Building headers for HTTP response
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_TYPE, contentType);
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; fileName=\"" + URLEncoder.encode(filePath.getFileName().toString(), StandardCharsets.UTF_8) + "\"");
-        headers.add(HttpHeaders.PRAGMA, "no-cache");
-        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
-        headers.add(HttpHeaders.EXPIRES, "0");
-
-        return ResponseEntity.ok().headers(headers).contentType(MediaType.parseMediaType(contentType)).body(resource);
+        return ResponseEntity.ok().headers(file.headers()).body(file.resource());
     }
 
     public void delete(String filePath) throws IOException, NullPointerException {
@@ -225,7 +173,7 @@ public class FileService {
         Stream<Path> walkStream = Files.walk(getMyUserPath(searchFile.directory() == null ? "" : searchFile.directory()));
         // Skip(1), because it starts the list with itself (directory)
         Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(searchFile.fileName()));
-        var filesMetadata = getFilesMetadata(filteredWalkStream);
+        var filesMetadata = fileSystemService.getFilesMetadata(filteredWalkStream);
         walkStream.close();
         return filesMetadata;
     }
@@ -298,34 +246,16 @@ public class FileService {
         } while (true);
     }
 
-    // TODO: refactor duplicates
     public ResponseEntity<InputStreamResource> downloadLinkFile(UUID uuid) throws IOException {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
-
         Path filePath = Paths.get(fileLink.getPath());
 
-        if (!Files.exists(filePath)) {
+        var file = fileSystemService.prepareFileForDownload(filePath);
+
+        if (file == null) {
             return ResponseEntity.notFound().build();
         }
-
-        InputStream inputStream = Files.newInputStream(filePath);
-        InputStreamResource resource = new InputStreamResource(inputStream);
-
-        String contentType = Files.probeContentType(filePath);
-        if (contentType == null) {
-            String fileExtension = getFileExtension(filePath.getFileName().toString());
-            contentType = getContentTypeFromExtension(fileExtension);
-        }
-
-        // Building headers for HTTP response
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_TYPE, contentType);
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; fileName=\"" + URLEncoder.encode(filePath.getFileName().toString(), StandardCharsets.UTF_8) + "\"");
-        headers.add(HttpHeaders.PRAGMA, "no-cache");
-        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
-        headers.add(HttpHeaders.EXPIRES, "0");
-
-        return ResponseEntity.ok().headers(headers).contentType(MediaType.parseMediaType(contentType)).body(resource);
+        return ResponseEntity.ok().headers(file.headers()).body(file.resource());
     }
 
     // TODO: filePath filtering
@@ -334,7 +264,7 @@ public class FileService {
         Set<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
         Set<FileMetadataDTO> filesMetadata = new HashSet<>();
         for (String sharedFilePath : sharedFilePaths) {
-            filesMetadata.add(getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
+            filesMetadata.add(fileSystemService.getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
         }
         return filesMetadata;
     }
@@ -348,7 +278,7 @@ public class FileService {
         Set<SharedFile> sharedFiles = sharedFileRepository.findFilesSharedTo(me.getId());
         Set<FileMetadataDTO> filesMetadata = new HashSet<>();
         for (SharedFile sharedFile : sharedFiles) {
-            filesMetadata.add(getFileMetadata(Paths.get(FILES_ROOT + sharedFile.getOwnerId() + "/" + sharedFile.getPath())));
+            filesMetadata.add(fileSystemService.getFileMetadata(Paths.get(FILES_ROOT + sharedFile.getOwnerId() + "/" + sharedFile.getPath())));
         }
         return filesMetadata;
     }

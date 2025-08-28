@@ -38,7 +38,7 @@ public class FileController {
     @GetMapping("/list/**")
     public ResponseEntity<Set<FileMetadataDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
         var path = decodeURL(request, "/list/");
-        var files = fileService.filesInDirectory(path);
+        var files = fileService.filesInMyDirectory(path);
         return new ResponseEntity<>(files, HttpStatus.OK);
     }
 
