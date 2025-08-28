@@ -8,12 +8,12 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "shared_global_file")
+@Table(name = "file_link")
 @Getter
 @Setter
 @RequiredArgsConstructor
 @NoArgsConstructor
-public class SharedGlobalFile {
+public class FileLink {
     @NonNull
     @Id
     @Column(nullable = false, unique = true)

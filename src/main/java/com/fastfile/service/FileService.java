@@ -4,10 +4,10 @@ import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.model.SharedFile;
 import com.fastfile.model.SharedFileKey;
-import com.fastfile.model.SharedGlobalFile;
+import com.fastfile.model.FileLink;
 import com.fastfile.model.User;
 import com.fastfile.repository.SharedFileRepository;
-import com.fastfile.repository.SharedGlobalFileRepository;
+import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
 import org.springframework.core.io.InputStreamResource;
@@ -39,15 +39,15 @@ public class FileService {
     private final UserService userService;
     private final UserRepository userRepository;
     private final SharedFileRepository sharedFileRepository;
-    private final SharedGlobalFileRepository sharedGlobalFileRepository;
+    private final FileLinkRepository fileLinkRepository;
 
 
-    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, SharedGlobalFileRepository sharedGlobalFileRepository) {
+    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, FileLinkRepository fileLinkRepository) {
         this.authService = authService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.sharedFileRepository = sharedFileRepository;
-        this.sharedGlobalFileRepository = sharedGlobalFileRepository;
+        this.fileLinkRepository = fileLinkRepository;
     }
 
     FileMetadataDTO getFileMetadata(Path path) throws IOException {
@@ -273,16 +273,21 @@ public class FileService {
         return sharedFile;
     }
 
-    public SharedGlobalFile shareGlobalFile(String filePath) {
+    public FileLink shareLinkFile(String filePath) {
+        String fullPath = getMyUserPath(filePath).normalize().toString();
+        boolean fileExists = Files.exists(Paths.get(fullPath));
+        if (!fileExists) {
+            return null;
+        }
         User me = userService.getMe();
-        SharedGlobalFile file;
+        FileLink file;
 
         int attempts = 0;
         do {
             UUID randomUUID = UUID.randomUUID();
-            file = new SharedGlobalFile(randomUUID, me, filePath);
+            file = new FileLink(randomUUID, me, fullPath);
             try {
-                return sharedGlobalFileRepository.save(file);
+                return fileLinkRepository.save(file);
             } catch (DataIntegrityViolationException e) {
                 // UUID collision, try again
                 attempts++;
@@ -293,7 +298,37 @@ public class FileService {
         } while (true);
     }
 
-    // TODO: file path sharing
+    // TODO: refactor duplicates
+    public ResponseEntity<InputStreamResource> downloadLinkFile(UUID uuid) throws IOException {
+        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
+
+        Path filePath = Paths.get(fileLink.getPath());
+
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        InputStream inputStream = Files.newInputStream(filePath);
+        InputStreamResource resource = new InputStreamResource(inputStream);
+
+        String contentType = Files.probeContentType(filePath);
+        if (contentType == null) {
+            String fileExtension = getFileExtension(filePath.getFileName().toString());
+            contentType = getContentTypeFromExtension(fileExtension);
+        }
+
+        // Building headers for HTTP response
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_TYPE, contentType);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; fileName=\"" + URLEncoder.encode(filePath.getFileName().toString(), StandardCharsets.UTF_8) + "\"");
+        headers.add(HttpHeaders.PRAGMA, "no-cache");
+        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        headers.add(HttpHeaders.EXPIRES, "0");
+
+        return ResponseEntity.ok().headers(headers).contentType(MediaType.parseMediaType(contentType)).body(resource);
+    }
+
+    // TODO: filePath filtering
     public Set<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
         User me = userService.getMe();
         Set<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());

@@ -4,7 +4,7 @@ import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.dto.ShareFileDTO;
 import com.fastfile.model.SharedFile;
-import com.fastfile.model.SharedGlobalFile;
+import com.fastfile.model.FileLink;
 import com.fastfile.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.InputStreamResource;
@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/files")
@@ -104,9 +105,19 @@ public class FileController {
         }
     }
 
-    @PostMapping("/share-global")
-    public ResponseEntity<SharedGlobalFile> shareGlobalFile(@RequestBody String filePath) {
-        return ResponseEntity.ok(fileService.shareGlobalFile(filePath));
+    @PostMapping("/share-link")
+    public ResponseEntity<FileLink> shareLinkFile(@RequestBody String filePath) {
+        FileLink fileLink = fileService.shareLinkFile(filePath);
+        if (fileLink != null) {
+            return ResponseEntity.ok().body(fileLink);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @GetMapping("/download-link/{uuid}")
+    public ResponseEntity<InputStreamResource> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
+        return fileService.downloadLinkFile(uuid);
     }
 
     @GetMapping("/shared-by-me")
