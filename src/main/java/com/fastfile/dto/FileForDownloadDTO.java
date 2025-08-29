@@ -1,6 +1,6 @@
 package com.fastfile.dto;
 
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-public record FileForDownloadDTO(InputStreamResource resource, HttpHeaders headers) {}
+public record FileForDownloadDTO(StreamingResponseBody body, HttpHeaders headers) {}

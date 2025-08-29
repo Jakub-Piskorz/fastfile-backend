@@ -1,7 +1,7 @@
 package com.fastfile.service;
 
 import com.fastfile.dto.FileMetadataDTO;
-import com.fastfile.dto.SearchFileDTO;
+import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.model.SharedFile;
 import com.fastfile.model.SharedFileKey;
 import com.fastfile.model.FileLink;
@@ -10,23 +10,26 @@ import com.fastfile.repository.SharedFileRepository;
 import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class FileService {
-    public static final String FILES_ROOT = "files/";
 
     private final AuthService authService;
     private final UserService userService;
@@ -149,15 +152,53 @@ public class FileService {
         return null;
     }
 
-    public ResponseEntity<InputStreamResource> downloadFile(String directory) throws IOException {
-        Path filePath = getMyUserPath(directory);
+    public ResponseEntity<StreamingResponseBody> downloadFile(String filePath) throws IOException {
+        Path fullFilePath = getMyUserPath(filePath);
 
-        var file = fileSystemService.prepareFileForDownload(filePath);
+        var file = fileSystemService.prepareFileForDownload(fullFilePath);
         if (file == null) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok().headers(file.headers()).body(file.resource());
+        return ResponseEntity.ok().headers(file.headers()).body(file.body());
+    }
+
+    public ResponseEntity<StreamingResponseBody> downloadMultiple(FilePathsDTO filePaths) throws IOException {
+        Path tempPath = Paths.get(FILES_ROOT + LocalTime.now().toString().replaceAll("[:.]", "-")).toAbsolutePath();
+        Files.createDirectory(tempPath);
+
+        final FileOutputStream fos = new FileOutputStream(tempPath + "/compressed.zip");
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+
+        for (String filePath : filePaths.filePaths()) {
+            Path finalFilePath = getMyUserPath(filePath);
+            File fileToZip = new File(finalFilePath.toString());
+            FileInputStream fis = new FileInputStream(fileToZip);
+            ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
+            zipOut.putNextEntry(zipEntry);
+
+            byte[] bytes = new byte[1024];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zipOut.write(bytes, 0, length);
+            }
+            fis.close();
+        }
+
+        var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + "/compressed.zip"), () -> {
+            // delete temp folder after streaming
+            try {
+                Files.walk(tempPath)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        zipOut.close();
+        fos.close();
+        return ResponseEntity.ok().headers(zippedFile.headers()).body(zippedFile.body());
     }
 
     public void delete(String filePath) throws IOException, NullPointerException {
@@ -166,13 +207,13 @@ public class FileService {
         updateMyUserStorage();
     }
 
-    public Iterable<FileMetadataDTO> searchFiles(SearchFileDTO searchFile) throws IOException {
-        if (searchFile.fileName() == null || searchFile.fileName().isEmpty()) {
+    public Iterable<FileMetadataDTO> searchFiles(String fileName, String directory) throws IOException {
+        if (fileName == null || fileName.isEmpty()) {
             throw new IllegalArgumentException("File name is empty");
         }
-        Stream<Path> walkStream = Files.walk(getMyUserPath(searchFile.directory() == null ? "" : searchFile.directory()));
+        Stream<Path> walkStream = Files.walk(getMyUserPath(directory == null ? "" : directory));
         // Skip(1), because it starts the list with itself (directory)
-        Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(searchFile.fileName()));
+        Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(fileName));
         var filesMetadata = fileSystemService.getFilesMetadata(filteredWalkStream);
         walkStream.close();
         return filesMetadata;
@@ -246,7 +287,7 @@ public class FileService {
         } while (true);
     }
 
-    public ResponseEntity<InputStreamResource> downloadLinkFile(UUID uuid) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadLinkFile(UUID uuid) throws IOException {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
         Path filePath = Paths.get(fileLink.getPath());
 
@@ -255,7 +296,7 @@ public class FileService {
         if (file == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok().headers(file.headers()).body(file.resource());
+        return ResponseEntity.ok().headers(file.headers()).body(file.body());
     }
 
     // TODO: filePath filtering

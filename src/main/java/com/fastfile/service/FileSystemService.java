@@ -2,10 +2,9 @@ package com.fastfile.service;
 
 import com.fastfile.dto.FileForDownloadDTO;
 import com.fastfile.dto.FileMetadataDTO;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
@@ -19,6 +18,8 @@ import java.util.stream.Stream;
 
 @Service
 public class FileSystemService {
+
+    public static final String FILES_ROOT = "files/";
 
     FileMetadataDTO getFileMetadata(Path path) throws IOException {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
@@ -51,14 +52,28 @@ public class FileSystemService {
         };
     }
 
-    FileForDownloadDTO prepareFileForDownload(Path path) throws IOException {
+    FileForDownloadDTO prepareFileForDownload(Path path, Runnable afterStreamCallback) throws IOException {
         if (!Files.exists(path)) {
             return null;
         }
 
-        InputStream inputStream = Files.newInputStream(path);
-        InputStreamResource resource = new InputStreamResource(inputStream);
+        // Creating input stream from file
+        StreamingResponseBody stream = out -> {
+            try (InputStream inputStream = Files.newInputStream(path)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+                out.flush();
+            } finally {
+                if (afterStreamCallback != null) {
+                    afterStreamCallback.run(); // runs after streaming completes
+                }
+            }
+        };
 
+        // Preparing contentType for header
         String contentType = Files.probeContentType(path);
         if (contentType == null) {
             String fileExtension = getFileExtension(path.getFileName().toString());
@@ -73,6 +88,10 @@ public class FileSystemService {
         headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         headers.add(HttpHeaders.EXPIRES, "0");
 
-        return new FileForDownloadDTO(resource, headers);
+        return new FileForDownloadDTO(stream, headers);
+    }
+
+    FileForDownloadDTO prepareFileForDownload(Path path) throws IOException {
+        return prepareFileForDownload(path, null);
     }
 }

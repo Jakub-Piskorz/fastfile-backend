@@ -1,18 +1,19 @@
 package com.fastfile.controller;
 
 import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.dto.ShareFileDTO;
 import com.fastfile.model.SharedFile;
 import com.fastfile.model.FileLink;
 import com.fastfile.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -44,13 +45,18 @@ public class FileController {
 
     @PostMapping("/search")
     public Iterable<FileMetadataDTO> searchFiles(@RequestBody SearchFileDTO searchFile) throws IOException {
-        return fileService.searchFiles(searchFile);
+        return fileService.searchFiles(searchFile.fileName(), searchFile.directory());
     }
 
     @GetMapping("/download/**")
-    public ResponseEntity<InputStreamResource> downloadFile(HttpServletRequest request) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadFile(HttpServletRequest request) throws IOException {
         var path = decodeURL(request, "/download/");
         return fileService.downloadFile(path);
+    }
+
+    @PostMapping("/download-multiple")
+    public ResponseEntity<StreamingResponseBody> downloadFile(@RequestBody FilePathsDTO filePaths) throws IOException {
+        return fileService.downloadMultiple(filePaths);
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -116,7 +122,7 @@ public class FileController {
     }
 
     @GetMapping("/download-link/{uuid}")
-    public ResponseEntity<InputStreamResource> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
         return fileService.downloadLinkFile(uuid);
     }
 

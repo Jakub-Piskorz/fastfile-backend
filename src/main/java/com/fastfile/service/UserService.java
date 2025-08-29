@@ -13,7 +13,7 @@ import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import static com.fastfile.service.FileService.FILES_ROOT;
+import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class UserService {
