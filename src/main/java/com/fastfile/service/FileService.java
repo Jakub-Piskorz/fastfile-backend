@@ -185,7 +185,7 @@ public class FileService {
             fis.close();
         }
 
-        var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + "/compressed.zip"), () -> {
+        var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + "/download.zip"), () -> {
             // delete temp folder after streaming
             try {
                 Files.walk(tempPath)
