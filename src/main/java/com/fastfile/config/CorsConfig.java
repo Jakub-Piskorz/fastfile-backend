@@ -16,8 +16,8 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")  // Allow all endpoints
                 .allowedOriginPatterns("*")  // Allow all origins
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // Allow all HTTP methods
-                .allowedHeaders("*")  // Allow all headers
-                .exposedHeaders("Content-Disposition", "Pragma", "Cache-Control", "Expires", "Content-Type");  // Expose download file headers
+                .allowedHeaders("*");  // Allow all headers
+
     }
 
     @Bean
@@ -27,6 +27,13 @@ public class CorsConfig implements WebMvcConfigurer {
         config.addAllowedOriginPattern("*");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+
+        config.addExposedHeader("Content-Disposition");
+        config.addExposedHeader("Cache-Control");
+        config.addExposedHeader("Pragma");
+        config.addExposedHeader("Expires");
+        config.addExposedHeader("Content-Type");
+
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

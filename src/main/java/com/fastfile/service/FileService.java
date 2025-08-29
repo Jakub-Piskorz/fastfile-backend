@@ -165,9 +165,10 @@ public class FileService {
 
     public ResponseEntity<StreamingResponseBody> downloadMultiple(FilePathsDTO filePaths) throws IOException {
         Path tempPath = Paths.get(FILES_ROOT + LocalTime.now().toString().replaceAll("[:.]", "-")).toAbsolutePath();
+        String zipFileName = "/download.zip";
         Files.createDirectory(tempPath);
 
-        final FileOutputStream fos = new FileOutputStream(tempPath + "/compressed.zip");
+        final FileOutputStream fos = new FileOutputStream(tempPath + zipFileName);
         ZipOutputStream zipOut = new ZipOutputStream(fos);
 
         for (String filePath : filePaths.filePaths()) {
@@ -185,7 +186,7 @@ public class FileService {
             fis.close();
         }
 
-        var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + "/download.zip"), () -> {
+        var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + zipFileName), () -> {
             // delete temp folder after streaming
             try {
                 Files.walk(tempPath)
