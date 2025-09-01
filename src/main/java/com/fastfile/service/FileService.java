@@ -85,11 +85,17 @@ public class FileService {
         return (currentUsage + newFileSize) > userService.getMyUserStorageLimit();
     }
 
-    public void updateMyUserStorage() throws IOException {
+    public void updateUserStorage(long userId) throws IOException {
         long myCurrentUsage = bytesInside(getMyUserPath());
-        User me = userService.getMe();
-        me.setUsedStorage(myCurrentUsage);
-        userRepository.save(me);
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        user.setUsedStorage(myCurrentUsage);
+        userRepository.save(user);
+    }
+    public void updateMyUserStorage() throws IOException {
+        updateUserStorage(userService.getMe().getId());
     }
 
     // Endpoint services
@@ -129,27 +135,16 @@ public class FileService {
 
     public Set<FileMetadataDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
         Path path = getMyUserPath(directory);
-
-        Stream<Path> walkStream = Files.walk(path, maxDepth).skip(1);
-        Set<FileMetadataDTO> filesMetadata = fileSystemService.getFilesMetadata(walkStream);
-        walkStream.close();
-        return filesMetadata;
+        return fileSystemService.filesInDirectory(path, maxDepth);
     }
 
     public Set<FileMetadataDTO> filesInMyDirectory(String directory) throws IOException {
         return filesInMyDirectory(directory, 1);
     }
 
-    public String createDirectory(String path) throws IOException {
-        String errorMsg;
+    public String createMyPersonalDirectory(String path) throws IOException {
         Path pathForDir = getMyUserPath(path);
-        // Check if path exists
-        if (Files.exists(pathForDir)) {
-            errorMsg = "Directory already exists";
-            return errorMsg;
-        }
-        Files.createDirectories(pathForDir);
-        return null;
+        return fileSystemService.createDirectory(pathForDir);
     }
 
     public ResponseEntity<StreamingResponseBody> downloadFile(String filePath) throws IOException {
@@ -223,21 +218,11 @@ public class FileService {
     @SneakyThrows
     public boolean deleteRecursively(String directory) {
         Path baseDir = getMyUserPath().toAbsolutePath();
-        Path path = getMyUserPath(directory);
-        if (path.toAbsolutePath().equals(baseDir)) {
+        Path finalPath = getMyUserPath(directory);
+        if (finalPath.toAbsolutePath().equals(baseDir)) {
             return false;
         }
-        try (Stream<Path> walkStream = Files.walk(path)) {
-            walkStream.sorted(Comparator.reverseOrder()).forEach(p -> {
-                try {
-                    Files.delete(p);
-                } catch (IOException e) {
-                    // Log or handle the exception if needed
-                    throw new UncheckedIOException(e);
-                }
-            });
-        }
-
+        fileSystemService.deleteRecursively(finalPath);
         updateMyUserStorage();
         return true;
     }

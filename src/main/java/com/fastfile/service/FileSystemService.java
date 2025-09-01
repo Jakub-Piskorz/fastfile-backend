@@ -2,16 +2,19 @@ package com.fastfile.service;
 
 import com.fastfile.dto.FileForDownloadDTO;
 import com.fastfile.dto.FileMetadataDTO;
+import lombok.SneakyThrows;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,6 +53,41 @@ public class FileSystemService {
             case "txt" -> "text/plain";
             default -> "application/octet-stream";
         };
+    }
+
+    public Set<FileMetadataDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
+        Stream<Path> walkStream = Files.walk(directory, maxDepth).skip(1);
+        Set<FileMetadataDTO> filesMetadata = getFilesMetadata(walkStream);
+        walkStream.close();
+        return filesMetadata;
+    }
+    public Set<FileMetadataDTO> filesInDirectory(Path directory) throws IOException {
+        return filesInDirectory(directory, 1);
+    }
+
+    public String createDirectory(Path path) throws IOException {
+        String errorMsg;
+        // Check if path exists
+        if (Files.exists(path)) {
+            errorMsg = "Directory already exists";
+            return errorMsg;
+        }
+        Files.createDirectories(path);
+        return null;
+    }
+
+    @SneakyThrows
+    public void deleteRecursively(Path path) {
+        try (Stream<Path> walkStream = Files.walk(path)) {
+            walkStream.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.delete(p);
+                } catch (IOException e) {
+                    // Log or handle the exception if needed
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
     }
 
     FileForDownloadDTO prepareFileForDownload(Path path, Runnable afterStreamCallback) throws IOException {

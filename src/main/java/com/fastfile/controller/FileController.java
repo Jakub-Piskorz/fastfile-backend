@@ -93,7 +93,7 @@ public class FileController {
     @GetMapping("/create-directory/**")
     public ResponseEntity<String> createDirectory(HttpServletRequest request) throws Exception {
         var filePath = decodeURL(request, "/create-directory/");
-        String errorMsg = fileService.createDirectory(filePath);
+        String errorMsg = fileService.createMyPersonalDirectory(filePath);
         if (errorMsg == null) {
             return new ResponseEntity<>("Successfully created directory.", HttpStatus.OK);
         } else {

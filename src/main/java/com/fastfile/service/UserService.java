@@ -44,30 +44,46 @@ public class UserService {
         return userRepository.findById(myUserId).orElse(null);
     }
 
-    public long getMyUserStorageLimit() {
-        User me = getMe();
-        boolean isUserPremium = Objects.equals(me.getUserType(), "premium");
+    public long getUserStorageLimit(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        boolean isUserPremium = Objects.equals(user.getUserType(), "premium");
 
         return isUserPremium ? premiumLimit : freeLimit;
     }
+    public long getMyUserStorageLimit() {
+        return getUserStorageLimit(getMe().getId());
+    }
 
-    public boolean UpdateMyUserType(String newUserType) {
+    public boolean updateUserType(Long userId, String newUserType) {
         if (!Pattern.matches("^(free|premium)$", newUserType)) {
             return false;
         }
-        User me = getMe();
-        me.setUserType(newUserType);
-        userRepository.save(me);
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        user.setUserType(newUserType);
+        userRepository.save(user);
 
         return true;
     }
+    public boolean updateMyUserType(String newUserType) {
+        return updateUserType(getMe().getId(), newUserType);
+    }
 
-    public long getMyUsedStorage() {
-        User me = getMe();
-        if (me == null) {
+    public long getUsedStorage(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
             throw new RuntimeException("User not found");
         }
-        return me.getUsedStorage();
+        return user.getUsedStorage();
+    }
+
+    public long getMyUsedStorage() {
+        return getUsedStorage(getMe().getId());
     }
 
 }

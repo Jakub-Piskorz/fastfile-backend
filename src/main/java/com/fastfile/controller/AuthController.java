@@ -42,7 +42,7 @@ public class AuthController {
 
     @PostMapping("/user/set-user-type")
     public ResponseEntity<String> setUserType(@RequestBody UserTypeDTO userType) {
-        boolean succeeded = userService.UpdateMyUserType(userType.userType());
+        boolean succeeded = userService.updateMyUserType(userType.userType());
         if (succeeded) {
             return new ResponseEntity<>("Successfully updated user to: " + userType.userType(), HttpStatus.OK);
         } else {
