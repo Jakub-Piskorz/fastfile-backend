@@ -3,7 +3,7 @@ package com.fastfile.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Set;
+import java.util.List;
 
 @Data
 @Entity
@@ -41,8 +41,8 @@ public class User {
     private Long usedStorage = 0L;
 
     @OneToMany(mappedBy = "owner")
-    private Set<SharedFile> filesSharedWithOthers;
+    private List<SharedFile> filesSharedWithOthers;
 
     @OneToMany(mappedBy = "sharedUser")
-    private Set<SharedFile> filesSharedWithMe;
+    private List<SharedFile> filesSharedWithMe;
 }

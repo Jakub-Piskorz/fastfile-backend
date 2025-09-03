@@ -133,12 +133,12 @@ public class FileService {
         return true;
     }
 
-    public Set<FileMetadataDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
+    public List<FileMetadataDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
         Path path = getMyUserPath(directory);
         return fileSystemService.filesInDirectory(path, maxDepth);
     }
 
-    public Set<FileMetadataDTO> filesInMyDirectory(String directory) throws IOException {
+    public List<FileMetadataDTO> filesInMyDirectory(String directory) throws IOException {
         return filesInMyDirectory(directory, 1);
     }
 
@@ -286,24 +286,24 @@ public class FileService {
     }
 
     // TODO: filePath filtering
-    public Set<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
+    public List<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
         User me = userService.getMe();
-        Set<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
-        Set<FileMetadataDTO> filesMetadata = new HashSet<>();
+        List<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
+        List<FileMetadataDTO> filesMetadata = new ArrayList<>();
         for (String sharedFilePath : sharedFilePaths) {
             filesMetadata.add(fileSystemService.getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
         }
         return filesMetadata;
     }
 
-    public Set<FileMetadataDTO> filesSharedByMe() throws IOException {
+    public List<FileMetadataDTO> filesSharedByMe() throws IOException {
         return filesSharedByMe("");
     }
 
-    public Set<FileMetadataDTO> filesSharedToMe() throws IOException {
+    public List<FileMetadataDTO> filesSharedToMe() throws IOException {
         User me = userService.getMe();
-        Set<SharedFile> sharedFiles = sharedFileRepository.findFilesSharedTo(me.getId());
-        Set<FileMetadataDTO> filesMetadata = new HashSet<>();
+        List<SharedFile> sharedFiles = sharedFileRepository.findFilesSharedTo(me.getId());
+        List<FileMetadataDTO> filesMetadata = new ArrayList<>();
         for (SharedFile sharedFile : sharedFiles) {
             filesMetadata.add(fileSystemService.getFileMetadata(Paths.get(FILES_ROOT + sharedFile.getOwnerId() + "/" + sharedFile.getPath())));
         }

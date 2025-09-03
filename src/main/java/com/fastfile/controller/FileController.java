@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -38,7 +37,7 @@ public class FileController {
     }
 
     @GetMapping("/list/**")
-    public ResponseEntity<Set<FileMetadataDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
+    public ResponseEntity<List<FileMetadataDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
         var path = decodeURL(request, "/list/");
         var files = fileService.filesInMyDirectory(path);
         return new ResponseEntity<>(files, HttpStatus.OK);
@@ -148,8 +147,8 @@ public class FileController {
     }
 
     @GetMapping("/shared-by-me")
-    public ResponseEntity<Set<FileMetadataDTO>> filesSharedByMe() throws Exception {
-        Set<FileMetadataDTO> files = fileService.filesSharedByMe();
+    public ResponseEntity<List<FileMetadataDTO>> filesSharedByMe() throws Exception {
+        List<FileMetadataDTO> files = fileService.filesSharedByMe();
         if (files != null) {
             return new ResponseEntity<>(files, HttpStatus.OK);
         } else {
@@ -158,8 +157,8 @@ public class FileController {
     }
 
     @GetMapping("/shared-to-me")
-    public ResponseEntity<Set<FileMetadataDTO>> filesSharedToMe() throws Exception {
-        Set<FileMetadataDTO> files = fileService.filesSharedToMe();
+    public ResponseEntity<List<FileMetadataDTO>> filesSharedToMe() throws Exception {
+        List<FileMetadataDTO> files = fileService.filesSharedToMe();
         if (files != null) {
             return new ResponseEntity<>(files, HttpStatus.OK);
         } else {

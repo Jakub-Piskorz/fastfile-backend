@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,14 +36,14 @@ public class FileSystemService {
         return (i > 0) ? fileName.substring(i + 1) : "";
     }
 
-    Set<FileMetadataDTO> getFilesMetadata(Stream<Path> pathStream) {
+    List<FileMetadataDTO> getFilesMetadata(Stream<Path> pathStream) {
         return pathStream.map(_path -> {
             try {
                 return getFileMetadata(_path);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }).collect(Collectors.toSet());
+        }).collect(Collectors.toList());
     }
 
     String getContentTypeFromExtension(String extension) {
@@ -55,13 +56,13 @@ public class FileSystemService {
         };
     }
 
-    public Set<FileMetadataDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
+    public List<FileMetadataDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
         Stream<Path> walkStream = Files.walk(directory, maxDepth).skip(1);
-        Set<FileMetadataDTO> filesMetadata = getFilesMetadata(walkStream);
+        List<FileMetadataDTO> filesMetadata = getFilesMetadata(walkStream);
         walkStream.close();
         return filesMetadata;
     }
-    public Set<FileMetadataDTO> filesInDirectory(Path directory) throws IOException {
+    public List<FileMetadataDTO> filesInDirectory(Path directory) throws IOException {
         return filesInDirectory(directory, 1);
     }
 
