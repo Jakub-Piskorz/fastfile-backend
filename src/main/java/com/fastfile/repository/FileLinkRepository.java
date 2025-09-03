@@ -6,6 +6,7 @@ import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -21,8 +22,7 @@ public interface FileLinkRepository extends JpaRepository<FileLink, UUID> {
     @Query("SELECT link.owner FROM FileLink link WHERE link.path = :path")
     Optional<User> findOwnerByPath(String path);
 
-    @Query("SELECT link FROM FileLink link WHERE link.owner.id = :userId")
-    Set<FileLink> findFilesSharedBy(Long userId);
+    List<FileLink> findAllByOwnerId(Long ownerId);
 
     boolean existsByUuid(@NonNull UUID uuid);
 

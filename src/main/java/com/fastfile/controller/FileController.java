@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -124,6 +125,26 @@ public class FileController {
     @GetMapping("/download-link/{uuid}")
     public ResponseEntity<StreamingResponseBody> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
         return fileService.downloadLinkFile(uuid);
+    }
+
+    @GetMapping("/lookup-link/{uuid}")
+    public ResponseEntity<FileMetadataDTO> lookupLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
+        FileMetadataDTO fileMetadata = fileService.lookupLinkFile(uuid);
+        if (fileMetadata != null) {
+            return ResponseEntity.ok().body(fileMetadata);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @GetMapping("/my-links")
+    public ResponseEntity<List<FileMetadataDTO>> getMyLinks() throws IOException {
+        List<FileMetadataDTO> fileMetadatas = fileService.myLinks();
+        if (fileMetadatas != null && !fileMetadatas.isEmpty()) {
+            return ResponseEntity.ok().body(fileMetadatas);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
     }
 
     @GetMapping("/shared-by-me")

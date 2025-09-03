@@ -309,4 +309,19 @@ public class FileService {
         }
         return filesMetadata;
     }
+
+    public FileMetadataDTO lookupLinkFile(UUID uuid) throws IOException {
+        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
+        return fileSystemService.getFileMetadata(Paths.get(fileLink.getPath()));
+    }
+
+    public List<FileMetadataDTO> myLinks() throws IOException {
+        List<FileLink> fileLinks = fileLinkRepository.findAllByOwnerId(userService.getMe().getId());
+        ArrayList<FileMetadataDTO> fileMetadatas = new ArrayList<>();
+        for (FileLink fileLink : fileLinks) {
+            FileMetadataDTO metadata = lookupLinkFile(fileLink.getUuid());
+            fileMetadatas.add(metadata);
+        }
+        return fileMetadatas;
+    }
 }
