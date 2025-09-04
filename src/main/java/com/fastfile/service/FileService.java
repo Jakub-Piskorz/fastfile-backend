@@ -250,6 +250,12 @@ public class FileService {
 
     public FileLink shareLinkFile(String filePath) {
         String fullPath = getMyUserPath(filePath).normalize().toString();
+
+        FileLink fileLink = fileLinkRepository.findByPath(fullPath).orElse(null);
+        if (fileLink != null) {
+            return fileLink;
+        }
+
         boolean fileExists = Files.exists(Paths.get(fullPath));
         if (!fileExists) {
             return null;
