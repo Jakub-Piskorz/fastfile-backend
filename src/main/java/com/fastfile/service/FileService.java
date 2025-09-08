@@ -159,6 +159,9 @@ public class FileService {
     }
 
     public ResponseEntity<StreamingResponseBody> downloadMultiple(FilePathsDTO filePaths) throws IOException {
+        if (filePaths.filePaths().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         Path tempPath = Paths.get(FILES_ROOT + LocalTime.now().toString().replaceAll("[:.]", "-")).toAbsolutePath();
         String zipFileName = "/download.zip";
         Files.createDirectory(tempPath);
