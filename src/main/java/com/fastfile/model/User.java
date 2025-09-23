@@ -37,12 +37,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @OneToMany(mappedBy = "sharedUser")
+    private List<FileLinkShare> fileLinkShares;
+
     private String userType = "free";
     private Long usedStorage = 0L;
-
-    @OneToMany(mappedBy = "owner")
-    private List<SharedFile> filesSharedWithOthers;
-
-    @OneToMany(mappedBy = "sharedUser")
-    private List<SharedFile> filesSharedWithMe;
 }

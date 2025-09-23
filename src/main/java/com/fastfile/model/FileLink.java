@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -28,4 +29,11 @@ public class FileLink {
     @NonNull
     @Column(nullable = false, unique = true)
     private String path;
+
+    @NonNull
+    @Column(nullable = false)
+    private Boolean isPublic;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "fileLink")
+    private List<FileLinkShare> fileLinkShares;
 }

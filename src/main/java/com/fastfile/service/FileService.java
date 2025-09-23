@@ -2,12 +2,11 @@ package com.fastfile.service;
 
 import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.FilePathsDTO;
-import com.fastfile.model.SharedFile;
-import com.fastfile.model.SharedFileKey;
 import com.fastfile.model.FileLink;
+import com.fastfile.model.FileLinkShare;
 import com.fastfile.model.User;
-import com.fastfile.repository.SharedFileRepository;
 import com.fastfile.repository.FileLinkRepository;
+import com.fastfile.repository.FileLinkShareRepository;
 import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,18 +33,18 @@ public class FileService {
     private final AuthService authService;
     private final UserService userService;
     private final UserRepository userRepository;
-    private final SharedFileRepository sharedFileRepository;
     private final FileLinkRepository fileLinkRepository;
     private final FileSystemService fileSystemService;
+    private final FileLinkShareRepository fileLinkShareRepository;
 
 
-    public FileService(AuthService authService, UserService userService, UserRepository userRepository, SharedFileRepository sharedFileRepository, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService) {
+    public FileService(AuthService authService, UserService userService, UserRepository userRepository, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService, FileLinkShareRepository fileLinkShareRepository) {
         this.authService = authService;
         this.userService = userService;
         this.userRepository = userRepository;
-        this.sharedFileRepository = sharedFileRepository;
         this.fileLinkRepository = fileLinkRepository;
         this.fileSystemService = fileSystemService;
+        this.fileLinkShareRepository = fileLinkShareRepository;
     }
 
     Path getMyUserPath(String directory) {
@@ -94,6 +93,7 @@ public class FileService {
         user.setUsedStorage(myCurrentUsage);
         userRepository.save(user);
     }
+
     public void updateMyUserStorage() throws IOException {
         updateUserStorage(userService.getMe().getId());
     }
@@ -230,28 +230,7 @@ public class FileService {
         return true;
     }
 
-    public SharedFile shareFile(String path, Long targetUserId) {
-        User me = userService.getMe();
-        User targetUser = userRepository.findById(targetUserId).orElseThrow();
-
-        SharedFileKey compositeId = new SharedFileKey();
-        compositeId.setOwnerId(me.getId());
-        compositeId.setSharedUserId(targetUserId);
-        compositeId.setPath(path);
-
-        if (sharedFileRepository.existsById(compositeId)) {
-            throw new RuntimeException("File is already shared with this user.");
-        }
-
-        SharedFile sharedFile = new SharedFile();
-        sharedFile.setId(compositeId);
-        sharedFile.setSharedUser(targetUser);
-        sharedFile.setOwner(me);
-        sharedFileRepository.save(sharedFile);
-        return sharedFile;
-    }
-
-    public FileLink shareLinkFile(String filePath) {
+    private FileLink createFileLink(String filePath, Boolean isPublic) {
         String fullPath = getMyUserPath(filePath).normalize().toString();
 
         FileLink fileLink = fileLinkRepository.findByPath(fullPath).orElse(null);
@@ -269,7 +248,7 @@ public class FileService {
         int attempts = 0;
         do {
             UUID randomUUID = UUID.randomUUID();
-            file = new FileLink(randomUUID, me, fullPath);
+            file = new FileLink(randomUUID, me, fullPath, isPublic);
             try {
                 return fileLinkRepository.save(file);
             } catch (DataIntegrityViolationException e) {
@@ -282,6 +261,24 @@ public class FileService {
         } while (true);
     }
 
+    public FileLink createPublicFileLink(String filePath) {
+        return createFileLink(filePath, true);
+    }
+
+    public FileLink createPrivateFileLink(String filePath, List<String> emails) {
+        FileLink fileLink = createFileLink(filePath, false);
+        assert fileLink != null;
+
+        emails.forEach(email -> {
+            FileLinkShare fileLinkShare = new FileLinkShare();
+            fileLinkShare.setFileLink(fileLink);
+            User user = userRepository.findByEmail(email).orElseThrow();
+            fileLinkShare.setSharedUser(user);
+            fileLinkShareRepository.save(fileLinkShare);
+        });
+        return fileLink;
+    }
+
     public ResponseEntity<StreamingResponseBody> downloadLinkFile(UUID uuid) throws IOException {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
         Path filePath = Paths.get(fileLink.getPath());
@@ -292,31 +289,6 @@ public class FileService {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok().headers(file.headers()).body(file.body());
-    }
-
-    // TODO: filePath filtering
-    public List<FileMetadataDTO> filesSharedByMe(String filePath) throws IOException {
-        User me = userService.getMe();
-        List<String> sharedFilePaths = sharedFileRepository.findFilePathsSharedBy(me.getId());
-        List<FileMetadataDTO> filesMetadata = new ArrayList<>();
-        for (String sharedFilePath : sharedFilePaths) {
-            filesMetadata.add(fileSystemService.getFileMetadata(getMyUserPath().resolve(sharedFilePath)));
-        }
-        return filesMetadata;
-    }
-
-    public List<FileMetadataDTO> filesSharedByMe() throws IOException {
-        return filesSharedByMe("");
-    }
-
-    public List<FileMetadataDTO> filesSharedToMe() throws IOException {
-        User me = userService.getMe();
-        List<SharedFile> sharedFiles = sharedFileRepository.findFilesSharedTo(me.getId());
-        List<FileMetadataDTO> filesMetadata = new ArrayList<>();
-        for (SharedFile sharedFile : sharedFiles) {
-            filesMetadata.add(fileSystemService.getFileMetadata(Paths.get(FILES_ROOT + sharedFile.getOwnerId() + "/" + sharedFile.getPath())));
-        }
-        return filesMetadata;
     }
 
     public FileMetadataDTO lookupLinkFile(UUID uuid) throws IOException {

@@ -3,8 +3,6 @@ package com.fastfile.controller;
 import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.SearchFileDTO;
-import com.fastfile.dto.ShareFileDTO;
-import com.fastfile.model.SharedFile;
 import com.fastfile.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -96,36 +94,6 @@ public class FileController {
             return new ResponseEntity<>("Successfully created directory.", HttpStatus.OK);
         } else {
             return new ResponseEntity<>(errorMsg, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    @PostMapping("/share")
-    public ResponseEntity<SharedFile> shareFile(@RequestBody ShareFileDTO shareFileDTO) throws Exception {
-        SharedFile sharedFile = fileService.shareFile(shareFileDTO.path(), shareFileDTO.targetUserId());
-        if (sharedFile != null) {
-            return new ResponseEntity<>(sharedFile, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    @GetMapping("/shared-by-me")
-    public ResponseEntity<List<FileMetadataDTO>> filesSharedByMe() throws Exception {
-        List<FileMetadataDTO> files = fileService.filesSharedByMe();
-        if (files != null) {
-            return new ResponseEntity<>(files, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    @GetMapping("/shared-to-me")
-    public ResponseEntity<List<FileMetadataDTO>> filesSharedToMe() throws Exception {
-        List<FileMetadataDTO> files = fileService.filesSharedToMe();
-        if (files != null) {
-            return new ResponseEntity<>(files, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
 }

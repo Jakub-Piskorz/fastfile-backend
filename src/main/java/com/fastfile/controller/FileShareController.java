@@ -26,7 +26,7 @@ public class FileShareController {
 
     @PostMapping("")
     public ResponseEntity<FileLink> shareLinkFile(@RequestBody String filePath) {
-        FileLink fileLink = fileService.shareLinkFile(filePath);
+        FileLink fileLink = fileService.createPublicFileLink(filePath);
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);
         } else {
