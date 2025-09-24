@@ -1,6 +1,7 @@
 package com.fastfile.controller;
 
 import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.PrivateFileLinkDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.service.FileService;
 import org.springframework.http.HttpStatus;
@@ -24,9 +25,19 @@ public class FileShareController {
         this.fileService = fileService;
     }
 
-    @PostMapping("")
-    public ResponseEntity<FileLink> shareLinkFile(@RequestBody String filePath) {
+    @PostMapping("create")
+    public ResponseEntity<FileLink> shareFileLink(@RequestBody String filePath) {
         FileLink fileLink = fileService.createPublicFileLink(filePath);
+        if (fileLink != null) {
+            return ResponseEntity.ok().body(fileLink);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @PostMapping("create-private")
+    public ResponseEntity<FileLink> sharePrivateFileLink(@RequestBody PrivateFileLinkDTO privateFileLinkDTO) {
+        FileLink fileLink = fileService.createPrivateFileLink(privateFileLinkDTO.filePath(), privateFileLinkDTO.emails());
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);
         } else {
