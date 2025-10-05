@@ -3,8 +3,6 @@ package com.fastfile.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
-
 @Data
 @Entity
 @Getter
@@ -36,9 +34,6 @@ public class User {
     @NonNull
     @Column(nullable = false)
     private String password;
-
-    @OneToMany(mappedBy = "sharedUser")
-    private List<FileLinkShare> fileLinkShares;
 
     private String userType = "free";
     private Long usedStorage = 0L;

@@ -9,7 +9,6 @@ import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.FileLinkShareRepository;
 import com.fastfile.repository.UserRepository;
 import lombok.SneakyThrows;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -182,21 +181,27 @@ public class FileService {
                 zipOut.write(bytes, 0, length);
             }
             fis.close();
+            zipOut.closeEntry();
         }
+        zipOut.close();
 
+        @SuppressWarnings("ResultOfMethodCallIgnored")
         var zippedFile = fileSystemService.prepareFileForDownload(Paths.get(tempPath + zipFileName), () -> {
             // delete temp folder after streaming
-            try {
-                Files.walk(tempPath)
-                        .sorted(Comparator.reverseOrder())
+            try (Stream<Path> stream = Files.walk(tempPath)) {
+                stream.sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(File::delete);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            try {
+                zipOut.close();
+                fos.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         });
-        zipOut.close();
-        fos.close();
         return ResponseEntity.ok().headers(zippedFile.headers()).body(zippedFile.body());
     }
 
@@ -241,83 +246,5 @@ public class FileService {
         fileSystemService.deleteRecursively(finalPath);
         updateMyUserStorage();
         return true;
-    }
-
-    private FileLink createFileLink(String filePath, Boolean isPublic) {
-        String fullPath = getMyUserPath(filePath).normalize().toString();
-
-        FileLink fileLink = fileLinkRepository.findByPath(fullPath).orElse(null);
-        if (fileLink != null) {
-            return fileLink;
-        }
-
-        boolean fileExists = Files.exists(Paths.get(fullPath));
-        if (!fileExists) {
-            return null;
-        }
-        User me = userService.getMe();
-        FileLink file;
-
-        int attempts = 0;
-        do {
-            UUID randomUUID = UUID.randomUUID();
-            file = new FileLink(randomUUID, me, fullPath, isPublic);
-            try {
-                return fileLinkRepository.save(file);
-            } catch (DataIntegrityViolationException e) {
-                // UUID collision, try again
-                attempts++;
-                if (attempts > 5) {
-                    throw new RuntimeException("Failed to generate unique UUID", e);
-                }
-            }
-        } while (true);
-    }
-
-    public FileLink createPublicFileLink(String filePath) {
-        return createFileLink(filePath, true);
-    }
-
-    public FileLink createPrivateFileLink(String filePath, List<String> emails) {
-        FileLink fileLink = createFileLink(filePath, false);
-        assert fileLink != null;
-
-        List<User> users = new ArrayList<>();
-        emails.forEach(email -> users.add(userRepository.findByEmail(email).orElseThrow()));
-
-        users.forEach(user -> {
-            FileLinkShare fileLinkShare = new FileLinkShare();
-            fileLinkShare.setFileLink(fileLink);
-            fileLinkShare.setSharedUser(user);
-            fileLinkShareRepository.save(fileLinkShare);
-        });
-        return fileLink;
-    }
-
-    public ResponseEntity<StreamingResponseBody> downloadLinkFile(UUID uuid) throws IOException {
-        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
-        Path filePath = Paths.get(fileLink.getPath());
-
-        var file = fileSystemService.prepareFileForDownload(filePath);
-
-        if (file == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok().headers(file.headers()).body(file.body());
-    }
-
-    public FileMetadataDTO lookupLinkFile(UUID uuid) throws IOException {
-        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
-        return fileSystemService.getFileMetadata(Paths.get(fileLink.getPath()));
-    }
-
-    public List<FileMetadataDTO> myLinks() throws IOException {
-        List<FileLink> fileLinks = fileLinkRepository.findAllByOwnerId(userService.getMe().getId());
-        ArrayList<FileMetadataDTO> fileMetadatas = new ArrayList<>();
-        for (FileLink fileLink : fileLinks) {
-            FileMetadataDTO metadata = lookupLinkFile(fileLink.getUuid());
-            fileMetadatas.add(metadata);
-        }
-        return fileMetadatas;
     }
 }

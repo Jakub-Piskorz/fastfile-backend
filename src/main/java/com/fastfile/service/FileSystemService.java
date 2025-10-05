@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -122,7 +121,9 @@ public class FileSystemService {
         // Building headers for HTTP response
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_TYPE, contentType);
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; fileName=\"" + URLEncoder.encode(path.getFileName().toString(), StandardCharsets.UTF_8) + "\"");
+        headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + path.getFileName().toString().replace("\"", "_") + "\"; filename*=UTF-8''" + URLEncoder.encode(path.getFileName().toString(), StandardCharsets.UTF_8)
+        );
         headers.add(HttpHeaders.PRAGMA, "no-cache");
         headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         headers.add(HttpHeaders.EXPIRES, "0");

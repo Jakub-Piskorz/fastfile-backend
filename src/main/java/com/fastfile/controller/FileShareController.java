@@ -3,7 +3,7 @@ package com.fastfile.controller;
 import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.PrivateFileLinkDTO;
 import com.fastfile.model.FileLink;
-import com.fastfile.service.FileService;
+import com.fastfile.service.FileLinkService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,15 +19,15 @@ import java.util.UUID;
 public class FileShareController {
 
 
-    private final FileService fileService;
+    private final FileLinkService fileLinkService;
 
-    public FileShareController(FileService fileService) {
-        this.fileService = fileService;
+    public FileShareController(FileLinkService fileLinkService) {
+        this.fileLinkService = fileLinkService;
     }
 
     @PostMapping("create")
     public ResponseEntity<FileLink> shareFileLink(@RequestBody String filePath) {
-        FileLink fileLink = fileService.createPublicFileLink(filePath);
+        FileLink fileLink = fileLinkService.createPublicFileLink(filePath);
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);
         } else {
@@ -37,7 +37,7 @@ public class FileShareController {
 
     @PostMapping("create-private")
     public ResponseEntity<FileLink> sharePrivateFileLink(@RequestBody PrivateFileLinkDTO privateFileLinkDTO) {
-        FileLink fileLink = fileService.createPrivateFileLink(privateFileLinkDTO.filePath(), privateFileLinkDTO.emails());
+        FileLink fileLink = fileLinkService.createPrivateFileLink(privateFileLinkDTO.filePath(), privateFileLinkDTO.emails());
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);
         } else {
@@ -47,12 +47,12 @@ public class FileShareController {
 
     @GetMapping("/{uuid}")
     public ResponseEntity<StreamingResponseBody> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
-        return fileService.downloadLinkFile(uuid);
+        return fileLinkService.downloadLinkFile(uuid);
     }
 
     @GetMapping("/lookup/{uuid}")
     public ResponseEntity<FileMetadataDTO> lookupLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
-        FileMetadataDTO fileMetadata = fileService.lookupLinkFile(uuid);
+        FileMetadataDTO fileMetadata = fileLinkService.lookupLinkFile(uuid);
         if (fileMetadata != null) {
             return ResponseEntity.ok().body(fileMetadata);
         } else {
@@ -62,11 +62,14 @@ public class FileShareController {
 
     @GetMapping("/list")
     public ResponseEntity<List<FileMetadataDTO>> getMyLinks() throws IOException {
-        List<FileMetadataDTO> fileMetadatas = fileService.myLinks();
-        if (fileMetadatas != null && !fileMetadatas.isEmpty()) {
-            return ResponseEntity.ok().body(fileMetadatas);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+        List<FileMetadataDTO> fileMetadatas = fileLinkService.myLinks();
+        return ResponseEntity.ok().body(fileMetadatas);
     }
+
+    @GetMapping("/shared-to-me")
+    public ResponseEntity<List<FileMetadataDTO>> linksSharedToMe() throws IOException {
+        List<FileMetadataDTO> fileMetadatas = fileLinkService.linksSharedToMe();
+        return ResponseEntity.ok().body(fileMetadatas);
+    }
+
 }

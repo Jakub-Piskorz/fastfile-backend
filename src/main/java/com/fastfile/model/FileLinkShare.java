@@ -24,8 +24,6 @@ public class FileLinkShare {
     private FileLink fileLink;
 
     @NonNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shared_user_email", referencedColumnName = "email", nullable = false)
-    @JsonIgnore // This won't be sent in HTTP response
-    private User sharedUser;
+    @Column(name = "shared_user_email", nullable = false)
+    private String sharedUserEmail;
 }

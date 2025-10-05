@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface FileLinkShareRepository extends JpaRepository<FileLinkShare, Long> {
     List<FileLinkShare> findAllByFileLink(FileLink fileLink);
+    List<FileLinkShare> findAllBySharedUserEmail(String sharedUserEmail);
+
 }
