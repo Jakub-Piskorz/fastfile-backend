@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class FileLinkService {
@@ -76,6 +77,14 @@ public class FileLinkService {
         assert fileLink != null;
 
         emails.forEach(email -> {
+            var emailShares = fileLinkShareRepository.findAllBySharedUserEmail(email);
+            AtomicBoolean found = new AtomicBoolean(false);
+            emailShares.forEach(share -> {
+                if (share.getFileLink().equals(fileLink)) {
+                    found.set(true);
+                }
+            });
+            if  (!found.get()) {}
             FileLinkShare fileLinkShare = new FileLinkShare();
             fileLinkShare.setFileLink(fileLink);
             fileLinkShare.setSharedUserEmail(email);
