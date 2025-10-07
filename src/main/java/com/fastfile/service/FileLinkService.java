@@ -6,6 +6,7 @@ import com.fastfile.model.FileLinkShare;
 import com.fastfile.model.User;
 import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.FileLinkShareRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FileLinkService {
@@ -38,24 +37,22 @@ public class FileLinkService {
     }
 
     private FileLink createFileLink(String filePath, Boolean isPublic) {
-        String fullPath = fileService.getMyUserPath(filePath).normalize().toString();
+        Path fullPath = fileService.getMyUserPath(filePath).normalize();
 
-        FileLink fileLink = fileLinkRepository.findByPath(fullPath).orElse(null);
-        if (fileLink != null) {
-            return fileLink;
-        }
+        boolean linkAlreadyExists = fileLinkRepository.existsByPath(fullPath.toString());
+        boolean fileExists = Files.exists(Paths.get(fullPath.toString()));
 
-        boolean fileExists = Files.exists(Paths.get(fullPath));
-        if (!fileExists) {
+        if (!fileExists || linkAlreadyExists) {
             return null;
         }
+
         User me = userService.getMe();
         FileLink file;
 
         int attempts = 0;
         do {
             UUID randomUUID = UUID.randomUUID();
-            file = new FileLink(randomUUID, me, fullPath, isPublic);
+            file = new FileLink(randomUUID, me, fullPath.toString(), isPublic);
             try {
                 return fileLinkRepository.save(file);
             } catch (DataIntegrityViolationException e) {
@@ -72,25 +69,81 @@ public class FileLinkService {
         return createFileLink(filePath, true);
     }
 
+    @Transactional
     public FileLink createPrivateFileLink(String filePath, List<String> emails) {
         FileLink fileLink = createFileLink(filePath, false);
-        assert fileLink != null;
+        if (fileLink == null) {
+            return null;
+        }
 
+        // Create email shares in DB
         emails.forEach(email -> {
-            var emailShares = fileLinkShareRepository.findAllBySharedUserEmail(email);
-            AtomicBoolean found = new AtomicBoolean(false);
-            emailShares.forEach(share -> {
-                if (share.getFileLink().equals(fileLink)) {
-                    found.set(true);
-                }
-            });
-            if  (!found.get()) {}
             FileLinkShare fileLinkShare = new FileLinkShare();
             fileLinkShare.setFileLink(fileLink);
             fileLinkShare.setSharedUserEmail(email);
             fileLinkShareRepository.save(fileLinkShare);
         });
+
         return fileLink;
+    }
+
+    @Transactional
+    public FileLink editPrivateFileLink(String filePath, Set<String> emails) {
+        Path fullPath = fileService.getMyUserPath(filePath).normalize();
+        FileLink fileLink = fileLinkRepository.findByPath(fullPath.toString());
+
+        if (fileLink == null || emails == null || emails.isEmpty()) {
+            return null;
+        }
+
+        Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLink(fileLink);
+        Set<String> existingEmails = existingShares.stream().map(FileLinkShare::getSharedUserEmail).collect(Collectors.toSet());
+
+        // Emails to add
+        Set<String> emailsToAdd = new HashSet<>(emails);
+        emailsToAdd.removeAll(existingEmails);
+
+        // Shares to add.
+        Set<FileLinkShare> sharesToAdd = emailsToAdd.stream().map(emailToAdd -> {
+            FileLinkShare newShare = new FileLinkShare();
+            newShare.setSharedUserEmail(emailToAdd);
+            newShare.setFileLink(fileLink);
+            return newShare;
+        }).collect(Collectors.toSet());
+
+        // Shares to remove
+        Set<FileLinkShare> sharesToRemove = existingShares.stream()
+                .filter(share -> !emails.contains(share.getSharedUserEmail()))
+                .collect(Collectors.toSet());
+
+        // Execute adds and removals at fileLinkShares.
+        fileLinkShareRepository.deleteAll(sharesToRemove);
+        fileLinkShareRepository.saveAll(sharesToAdd);
+
+        return fileLink;
+    }
+
+    boolean removePublicFileLink(UUID uuid) {
+        FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
+        if (linkToRemove == null || !linkToRemove.getIsPublic()) {
+            return false;
+        }
+        fileLinkRepository.delete(linkToRemove);
+        return true;
+    }
+
+    @Transactional
+    boolean removePrivateFileLink(UUID uuid) {
+        FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
+        if (linkToRemove == null || linkToRemove.getIsPublic()) {
+            return false;
+        }
+
+        // Remove linked shares before removing link.
+        fileLinkShareRepository.deleteAllByFileLink(linkToRemove);
+
+        fileLinkRepository.delete(linkToRemove);
+        return true;
     }
 
     public ResponseEntity<StreamingResponseBody> downloadLinkFile(UUID uuid) throws IOException {
