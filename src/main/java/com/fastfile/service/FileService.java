@@ -207,12 +207,12 @@ public class FileService {
 
     public void delete(String filePath) throws IOException, NullPointerException {
         Path path = getMyUserPath(filePath).normalize();
-        List<FileLink> fileLinks = fileLinkRepository.findAllByPath(path.toString());
+        Set<FileLink> fileLinks = fileLinkRepository.findAllByPath(path.toString());
 
         // Remove every link from database
         if (!fileLinks.isEmpty()) {
             for (FileLink fileLink : fileLinks) {
-                List<FileLinkShare> privateShares = fileLinkShareRepository.findAllByFileLink(fileLink);
+                Set<FileLinkShare> privateShares = fileLinkShareRepository.findAllByFileLink(fileLink);
                 if (!privateShares.isEmpty()) {
                     fileLinkShareRepository.deleteAll(privateShares);
                 }

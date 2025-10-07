@@ -5,6 +5,7 @@ import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface FileLinkRepository extends JpaRepository<FileLink, UUID> {
@@ -13,4 +14,6 @@ public interface FileLinkRepository extends JpaRepository<FileLink, UUID> {
     List<FileLink> findAllByOwnerId(Long ownerId);
 
     boolean existsByPath(String path);
+
+    Set<FileLink> findAllByPath(String string);
 }
