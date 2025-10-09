@@ -88,7 +88,7 @@ public class FileLinkService {
     }
 
     @Transactional
-    public FileLink editPrivateFileLink(String filePath, Set<String> emails) {
+    public FileLink updatePrivateLinkEmails(String filePath, Set<String> emails) {
         Path fullPath = fileService.getMyUserPath(filePath).normalize();
         FileLink fileLink = fileLinkRepository.findByPath(fullPath.toString());
 
@@ -99,14 +99,13 @@ public class FileLinkService {
         Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLink(fileLink);
         Set<String> existingEmails = existingShares.stream().map(FileLinkShare::getSharedUserEmail).collect(Collectors.toSet());
 
-        // Emails to add
-        Set<String> emailsToAdd = new HashSet<>(emails);
-        emailsToAdd.removeAll(existingEmails);
+        Set<String> newEmails = new HashSet<>(emails);
+        newEmails.removeAll(existingEmails);
 
         // Shares to add.
-        Set<FileLinkShare> sharesToAdd = emailsToAdd.stream().map(emailToAdd -> {
+        Set<FileLinkShare> sharesToAdd = newEmails.stream().map(newEmail -> {
             FileLinkShare newShare = new FileLinkShare();
-            newShare.setSharedUserEmail(emailToAdd);
+            newShare.setSharedUserEmail(newEmail);
             newShare.setFileLink(fileLink);
             return newShare;
         }).collect(Collectors.toSet());
@@ -116,7 +115,7 @@ public class FileLinkService {
                 .filter(share -> !emails.contains(share.getSharedUserEmail()))
                 .collect(Collectors.toSet());
 
-        // Execute adds and removals at fileLinkShares.
+        // Execute adds and removals of fileLinkShares.
         fileLinkShareRepository.deleteAll(sharesToRemove);
         fileLinkShareRepository.saveAll(sharesToAdd);
 
