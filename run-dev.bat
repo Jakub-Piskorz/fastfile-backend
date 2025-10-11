@@ -1,1 +1,1 @@
-./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=prod -f pom.xml
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=dev -f pom.xml

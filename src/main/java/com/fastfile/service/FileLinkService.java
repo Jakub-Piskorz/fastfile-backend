@@ -88,13 +88,11 @@ public class FileLinkService {
     }
 
     @Transactional
-    public FileLink updatePrivateLinkEmails(String filePath, Set<String> emails) {
-        Path fullPath = fileService.getMyUserPath(filePath).normalize();
-        FileLink fileLink = fileLinkRepository.findByPath(fullPath.toString());
+    public FileLink updatePrivateLinkEmails(UUID uuid, Set<String> emails) {
+        if (emails == null || uuid == null || uuid.toString().isEmpty() || emails.isEmpty()) return null;
 
-        if (fileLink == null || emails == null || emails.isEmpty()) {
-            return null;
-        }
+        FileLink fileLink = fileLinkRepository.findById(uuid).orElse(null);
+        if (fileLink == null) return null;
 
         Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLink(fileLink);
         Set<String> existingEmails = existingShares.stream().map(FileLinkShare::getSharedUserEmail).collect(Collectors.toSet());
@@ -122,25 +120,11 @@ public class FileLinkService {
         return fileLink;
     }
 
-    boolean removePublicFileLink(UUID uuid) {
-        FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
-        if (linkToRemove == null || !linkToRemove.getIsPublic()) {
-            return false;
-        }
-        fileLinkRepository.delete(linkToRemove);
-        return true;
-    }
-
     @Transactional
-    boolean removePrivateFileLink(UUID uuid) {
+    public boolean removeFileLink(UUID uuid) {
         FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
-        if (linkToRemove == null || linkToRemove.getIsPublic()) {
-            return false;
-        }
-
-        // Remove linked shares before removing link.
-        fileLinkShareRepository.deleteAllByFileLink(linkToRemove);
-
+        if (linkToRemove == null) return false;
+        if (!linkToRemove.getIsPublic()) fileLinkShareRepository.deleteAllByFileLink(linkToRemove);
         fileLinkRepository.delete(linkToRemove);
         return true;
     }

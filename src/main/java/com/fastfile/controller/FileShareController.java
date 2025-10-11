@@ -11,6 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -50,6 +51,27 @@ public class FileShareController {
         return fileLinkService.downloadLinkFile(uuid);
     }
 
+    @DeleteMapping("/{uuid}")
+    public ResponseEntity<String> removeFileLink(@PathVariable(name = "uuid") UUID uuid) {
+        var success = fileLinkService.removeFileLink(uuid);
+        if (success) {
+            return ResponseEntity.ok().body("Successfully deleted file fink.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Failed to delete file fink.");
+        }
+    }
+
+    @PatchMapping("/{uuid}")
+    public ResponseEntity<FileLink> updateFileLink(@PathVariable(name = "uuid") UUID uuid, @RequestBody Set<String> emails) {
+        emails.forEach(email -> {});
+        FileLink fileLink = fileLinkService.updatePrivateLinkEmails(uuid, emails);
+        if (fileLink != null) {
+            return ResponseEntity.ok().body(fileLink);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
     @GetMapping("/lookup/{uuid}")
     public ResponseEntity<FileMetadataDTO> lookupLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
         FileMetadataDTO fileMetadata = fileLinkService.lookupLinkFile(uuid);
@@ -71,5 +93,4 @@ public class FileShareController {
         List<FileMetadataDTO> fileMetadatas = fileLinkService.linksSharedToMe();
         return ResponseEntity.ok().body(fileMetadatas);
     }
-
 }

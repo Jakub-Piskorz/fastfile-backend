@@ -9,11 +9,14 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "file_link")
+@Table(name = "file_link", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"path", "is_public"})
+})
 @Getter
 @Setter
 @RequiredArgsConstructor
 @NoArgsConstructor
+
 public class FileLink {
     @NonNull
     @Id
@@ -27,7 +30,7 @@ public class FileLink {
     private User owner;
 
     @NonNull
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String path;
 
     @NonNull
