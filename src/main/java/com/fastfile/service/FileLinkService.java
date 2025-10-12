@@ -1,5 +1,6 @@
 package com.fastfile.service;
 
+import com.fastfile.dto.FileLinkDTO;
 import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
@@ -146,14 +147,15 @@ public class FileLinkService {
         return fileSystemService.getFileMetadata(Paths.get(fileLink.getPath()));
     }
 
-    public List<FileMetadataDTO> myLinks() throws IOException {
+    public List<FileLinkDTO> myLinks() throws IOException {
         List<FileLink> fileLinks = fileLinkRepository.findAllByOwnerId(userService.getMe().getId());
-        ArrayList<FileMetadataDTO> fileMetadatas = new ArrayList<>();
+        List<FileLinkDTO> DTOList = new ArrayList<>();
         for (FileLink fileLink : fileLinks) {
             FileMetadataDTO metadata = lookupLinkFile(fileLink.getUuid());
-            fileMetadatas.add(metadata);
+            FileLinkDTO dto = new FileLinkDTO(metadata, fileLink);
+            DTOList.add(dto);
         }
-        return fileMetadatas;
+        return DTOList;
     }
 
     public List<FileMetadataDTO> linksSharedToMe() throws IOException {

@@ -1,5 +1,6 @@
 package com.fastfile.controller;
 
+import com.fastfile.dto.FileLinkDTO;
 import com.fastfile.dto.FileMetadataDTO;
 import com.fastfile.dto.PrivateFileLinkDTO;
 import com.fastfile.model.FileLink;
@@ -63,7 +64,6 @@ public class FileShareController {
 
     @PatchMapping("/{uuid}")
     public ResponseEntity<FileLink> updateFileLink(@PathVariable(name = "uuid") UUID uuid, @RequestBody Set<String> emails) {
-        emails.forEach(email -> {});
         FileLink fileLink = fileLinkService.updatePrivateLinkEmails(uuid, emails);
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);
@@ -83,8 +83,8 @@ public class FileShareController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<FileMetadataDTO>> getMyLinks() throws IOException {
-        List<FileMetadataDTO> fileMetadatas = fileLinkService.myLinks();
+    public ResponseEntity<List<FileLinkDTO>> getMyLinks() throws IOException {
+        List<FileLinkDTO> fileMetadatas = fileLinkService.myLinks();
         return ResponseEntity.ok().body(fileMetadatas);
     }
 

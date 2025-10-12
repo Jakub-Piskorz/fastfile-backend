@@ -38,6 +38,5 @@ public class FileLink {
     private Boolean isPublic;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "fileLink")
-    @JsonIgnore // This won't be sent in HTTP response
     private List<FileLinkShare> fileLinkShares;
 }
