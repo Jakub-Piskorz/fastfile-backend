@@ -1,7 +1,7 @@
 package com.fastfile.service;
 
-import com.fastfile.dto.FileLinkDTO;
-import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.FileDTO;
+import com.fastfile.model.FileMetadata;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
 import com.fastfile.model.User;
@@ -26,22 +26,20 @@ public class FileLinkService {
     private final FileLinkRepository fileLinkRepository;
     private final FileSystemService fileSystemService;
     private final FileLinkShareRepository fileLinkShareRepository;
-    private final FileService fileService;
 
 
-    public FileLinkService(UserService userService, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService, FileLinkShareRepository fileLinkShareRepository, FileService fileService) {
+    public FileLinkService(UserService userService, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService, FileLinkShareRepository fileLinkShareRepository) {
         this.userService = userService;
         this.fileLinkRepository = fileLinkRepository;
         this.fileSystemService = fileSystemService;
         this.fileLinkShareRepository = fileLinkShareRepository;
-        this.fileService = fileService;
     }
 
     private FileLink createFileLink(String filePath, Boolean isPublic) {
-        Path fullPath = fileService.getMyUserPath(filePath).normalize();
+        System.out.println(filePath);
 
-        boolean linkAlreadyExists = fileLinkRepository.existsByPath(fullPath.toString());
-        boolean fileExists = Files.exists(Paths.get(fullPath.toString()));
+        boolean linkAlreadyExists = fileLinkRepository.existsByPath(filePath);
+        boolean fileExists = Files.exists(Paths.get(filePath));
 
         if (!fileExists || linkAlreadyExists) {
             return null;
@@ -53,7 +51,7 @@ public class FileLinkService {
         int attempts = 0;
         do {
             UUID randomUUID = UUID.randomUUID();
-            file = new FileLink(randomUUID, me, fullPath.toString(), isPublic);
+            file = new FileLink(randomUUID, me, filePath, isPublic);
             try {
                 return fileLinkRepository.save(file);
             } catch (DataIntegrityViolationException e) {
@@ -142,31 +140,35 @@ public class FileLinkService {
         return ResponseEntity.ok().headers(file.headers()).body(file.body());
     }
 
-    public FileMetadataDTO lookupLinkFile(UUID uuid) throws IOException {
-        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
-        return fileSystemService.getFileMetadata(Paths.get(fileLink.getPath()));
+    FileDTO linkToDTO(FileLink fileLink) throws IOException {
+        FileMetadata metadata = fileSystemService.getFileMetadata(Paths.get(fileLink.getPath()));
+        return new FileDTO(metadata, fileLink);
     }
 
-    public List<FileLinkDTO> myLinks() throws IOException {
+    public FileDTO lookupFile(UUID uuid) throws IOException {
+        FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
+        return linkToDTO(fileLink);
+    }
+
+    public List<FileDTO> myLinks() throws IOException {
         List<FileLink> fileLinks = fileLinkRepository.findAllByOwnerId(userService.getMe().getId());
-        List<FileLinkDTO> DTOList = new ArrayList<>();
+        List<FileDTO> DTOList = new ArrayList<>();
         for (FileLink fileLink : fileLinks) {
-            FileMetadataDTO metadata = lookupLinkFile(fileLink.getUuid());
-            FileLinkDTO dto = new FileLinkDTO(metadata, fileLink);
-            DTOList.add(dto);
+            FileDTO fileDTO = linkToDTO(fileLink);
+            DTOList.add(fileDTO);
         }
         return DTOList;
     }
 
-    public List<FileMetadataDTO> linksSharedToMe() throws IOException {
+    public List<FileDTO> linksSharedToMe() throws IOException {
         User me = userService.getMe();
         List<FileLinkShare> sharedLinks = fileLinkShareRepository.findAllBySharedUserEmail(me.getEmail());
-        ArrayList<FileMetadataDTO> fileMetadatas = new ArrayList<>();
+        List<FileDTO> fileDTOs = new ArrayList<>();
         for (FileLinkShare sharedLink : sharedLinks) {
             FileLink fileLink = sharedLink.getFileLink();
-            FileMetadataDTO metadata = lookupLinkFile(fileLink.getUuid());
-            fileMetadatas.add(metadata);
+            FileDTO fileDTO = linkToDTO(fileLink);
+            fileDTOs.add(fileDTO);
         }
-        return fileMetadatas;
+        return fileDTOs;
     }
 }

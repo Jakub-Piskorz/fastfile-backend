@@ -1,7 +1,6 @@
 package com.fastfile.controller;
 
-import com.fastfile.dto.FileLinkDTO;
-import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.PrivateFileLinkDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.service.FileLinkService;
@@ -73,24 +72,24 @@ public class FileShareController {
     }
 
     @GetMapping("/lookup/{uuid}")
-    public ResponseEntity<FileMetadataDTO> lookupLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
-        FileMetadataDTO fileMetadata = fileLinkService.lookupLinkFile(uuid);
-        if (fileMetadata != null) {
-            return ResponseEntity.ok().body(fileMetadata);
+    public ResponseEntity<FileDTO> lookupLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
+        FileDTO fileDTO = fileLinkService.lookupFile(uuid);
+        if (fileDTO != null) {
+            return ResponseEntity.ok().body(fileDTO);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<FileLinkDTO>> getMyLinks() throws IOException {
-        List<FileLinkDTO> fileMetadatas = fileLinkService.myLinks();
-        return ResponseEntity.ok().body(fileMetadatas);
+    public ResponseEntity<List<FileDTO>> getMyLinks() throws IOException {
+        List<FileDTO> fileDTOs = fileLinkService.myLinks();
+        return ResponseEntity.ok().body(fileDTOs);
     }
 
     @GetMapping("/shared-to-me")
-    public ResponseEntity<List<FileMetadataDTO>> linksSharedToMe() throws IOException {
-        List<FileMetadataDTO> fileMetadatas = fileLinkService.linksSharedToMe();
-        return ResponseEntity.ok().body(fileMetadatas);
+    public ResponseEntity<List<FileDTO>> linksSharedToMe() throws IOException {
+        List<FileDTO> fileDTOs = fileLinkService.linksSharedToMe();
+        return ResponseEntity.ok().body(fileDTOs);
     }
 }

@@ -1,6 +1,6 @@
 package com.fastfile.controller;
 
-import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.service.FileService;
@@ -33,15 +33,18 @@ public class FileController {
     }
 
     @GetMapping("/list/**")
-    public ResponseEntity<List<FileMetadataDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
+    public ResponseEntity<List<FileDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
         var path = decodeURL(request, "/list/");
         var files = fileService.filesInMyDirectory(path);
-        return new ResponseEntity<>(files, HttpStatus.OK);
+        var fileDTOs = fileService.assembleFileDTOList(files, null);
+        return new ResponseEntity<>(fileDTOs, HttpStatus.OK);
     }
 
     @PostMapping("/search")
-    public Iterable<FileMetadataDTO> searchFiles(@RequestBody SearchFileDTO searchFile) throws IOException {
-        return fileService.searchFiles(searchFile.fileName(), searchFile.directory());
+    public ResponseEntity<List<FileDTO>> searchFiles(@RequestBody SearchFileDTO searchFile) throws IOException {
+        var files = fileService.searchFiles(searchFile.fileName(), searchFile.directory());
+        var fileDTOS = fileService.assembleFileDTOList(files, null);
+        return new ResponseEntity<>(fileDTOS, HttpStatus.OK);
     }
 
     @GetMapping("/download/**")

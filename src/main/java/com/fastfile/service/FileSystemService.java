@@ -1,7 +1,7 @@
 package com.fastfile.service;
 
 import com.fastfile.dto.FileForDownloadDTO;
-import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.model.FileMetadata;
 import lombok.SneakyThrows;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -24,9 +24,9 @@ public class FileSystemService {
 
     public static final String FILES_ROOT = "files/";
 
-    FileMetadataDTO getFileMetadata(Path path) throws IOException {
+    FileMetadata getFileMetadata(Path path) throws IOException {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
-        return new FileMetadataDTO(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
+        return new FileMetadata(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
                 path.toString());
     }
 
@@ -35,7 +35,7 @@ public class FileSystemService {
         return (i > 0) ? fileName.substring(i + 1) : "";
     }
 
-    List<FileMetadataDTO> getFilesMetadata(Stream<Path> pathStream) {
+    List<FileMetadata> getFilesMetadata(Stream<Path> pathStream) {
         return pathStream.map(_path -> {
             try {
                 return getFileMetadata(_path);
@@ -55,13 +55,13 @@ public class FileSystemService {
         };
     }
 
-    public List<FileMetadataDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
+    public List<FileMetadata> filesInDirectory(Path directory, int maxDepth) throws IOException {
         Stream<Path> walkStream = Files.walk(directory, maxDepth).skip(1);
-        List<FileMetadataDTO> filesMetadata = getFilesMetadata(walkStream);
+        List<FileMetadata> filesMetadata = getFilesMetadata(walkStream);
         walkStream.close();
         return filesMetadata;
     }
-    public List<FileMetadataDTO> filesInDirectory(Path directory) throws IOException {
+    public List<FileMetadata> filesInDirectory(Path directory) throws IOException {
         return filesInDirectory(directory, 1);
     }
 

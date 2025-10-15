@@ -1,6 +1,7 @@
 package com.fastfile.service;
 
-import com.fastfile.dto.FileMetadataDTO;
+import com.fastfile.dto.FileDTO;
+import com.fastfile.model.FileMetadata;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
@@ -132,12 +133,12 @@ public class FileService {
         return true;
     }
 
-    public List<FileMetadataDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
+    public List<FileMetadata> filesInMyDirectory(String directory, int maxDepth) throws IOException {
         Path path = getMyUserPath(directory);
         return fileSystemService.filesInDirectory(path, maxDepth);
     }
 
-    public List<FileMetadataDTO> filesInMyDirectory(String directory) throws IOException {
+    public List<FileMetadata> filesInMyDirectory(String directory) throws IOException {
         return filesInMyDirectory(directory, 1);
     }
 
@@ -224,7 +225,7 @@ public class FileService {
         updateMyUserStorage();
     }
 
-    public Iterable<FileMetadataDTO> searchFiles(String fileName, String directory) throws IOException {
+    public List<FileMetadata> searchFiles(String fileName, String directory) throws IOException {
         if (fileName == null || fileName.isEmpty()) {
             throw new IllegalArgumentException("File name is empty");
         }
@@ -246,5 +247,13 @@ public class FileService {
         fileSystemService.deleteRecursively(finalPath);
         updateMyUserStorage();
         return true;
+    }
+
+    public List<FileDTO> assembleFileDTOList(List<FileMetadata> metadatas, List<FileLink> fileLinks) {
+        List<FileDTO> fileDTOs = new ArrayList<>();
+        for (int i = 0; i < metadatas.size(); i++) {
+            fileDTOs.add(new FileDTO(metadatas.get(i), (fileLinks != null) ? fileLinks.get(i) : null));
+        }
+        return fileDTOs;
     }
 }
