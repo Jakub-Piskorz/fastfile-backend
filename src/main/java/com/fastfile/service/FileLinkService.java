@@ -36,8 +36,6 @@ public class FileLinkService {
     }
 
     private FileLink createFileLink(String filePath, Boolean isPublic) {
-        System.out.println(filePath);
-
         boolean linkAlreadyExists = fileLinkRepository.existsByPath(filePath);
         boolean fileExists = Files.exists(Paths.get(filePath));
 
