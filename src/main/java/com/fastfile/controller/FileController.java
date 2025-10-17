@@ -35,16 +35,14 @@ public class FileController {
     @GetMapping("/list/**")
     public ResponseEntity<List<FileDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
         var path = decodeURL(request, "/list/");
-        var files = fileService.filesInMyDirectory(path);
-        var fileDTOs = fileService.assembleFileDTOList(files, null);
-        return new ResponseEntity<>(fileDTOs, HttpStatus.OK);
+        List<FileDTO> files = fileService.filesInMyDirectory(path);
+        return new ResponseEntity<>(files, HttpStatus.OK);
     }
 
     @PostMapping("/search")
     public ResponseEntity<List<FileDTO>> searchFiles(@RequestBody SearchFileDTO searchFile) throws IOException {
         var files = fileService.searchFiles(searchFile.fileName(), searchFile.directory());
-        var fileDTOS = fileService.assembleFileDTOList(files, null);
-        return new ResponseEntity<>(fileDTOS, HttpStatus.OK);
+        return new ResponseEntity<>(files, HttpStatus.OK);
     }
 
     @GetMapping("/download/**")

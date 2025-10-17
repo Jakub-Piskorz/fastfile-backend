@@ -1,7 +1,9 @@
 package com.fastfile.service;
 
+import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FileForDownloadDTO;
 import com.fastfile.model.FileMetadata;
+import com.fastfile.repository.FileLinkRepository;
 import lombok.SneakyThrows;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -16,13 +18,17 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 public class FileSystemService {
 
     public static final String FILES_ROOT = "files/";
+    private final FileLinkRepository fileLinkRepository;
+
+    public FileSystemService(FileLinkRepository fileLinkRepository) {
+        this.fileLinkRepository = fileLinkRepository;
+    }
 
     FileMetadata getFileMetadata(Path path) throws IOException {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
@@ -35,14 +41,16 @@ public class FileSystemService {
         return (i > 0) ? fileName.substring(i + 1) : "";
     }
 
-    List<FileMetadata> getFilesMetadata(Stream<Path> pathStream) {
+    List<FileDTO> getFilesDTO(Stream<Path> pathStream) {
         return pathStream.map(_path -> {
             try {
-                return getFileMetadata(_path);
+                var metadata = getFileMetadata(_path);
+                var fileLink = fileLinkRepository.findByPath(_path.toString());
+                return new FileDTO(metadata, fileLink);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     String getContentTypeFromExtension(String extension) {
@@ -55,13 +63,13 @@ public class FileSystemService {
         };
     }
 
-    public List<FileMetadata> filesInDirectory(Path directory, int maxDepth) throws IOException {
+    public List<FileDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
         Stream<Path> walkStream = Files.walk(directory, maxDepth).skip(1);
-        List<FileMetadata> filesMetadata = getFilesMetadata(walkStream);
+        List<FileDTO> filesMetadata = getFilesDTO(walkStream);
         walkStream.close();
         return filesMetadata;
     }
-    public List<FileMetadata> filesInDirectory(Path directory) throws IOException {
+    public List<FileDTO> filesInDirectory(Path directory) throws IOException {
         return filesInDirectory(directory, 1);
     }
 

@@ -1,7 +1,6 @@
 package com.fastfile.service;
 
 import com.fastfile.dto.FileDTO;
-import com.fastfile.model.FileMetadata;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
@@ -133,12 +132,12 @@ public class FileService {
         return true;
     }
 
-    public List<FileMetadata> filesInMyDirectory(String directory, int maxDepth) throws IOException {
+    public List<FileDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
         Path path = getMyUserPath(directory);
         return fileSystemService.filesInDirectory(path, maxDepth);
     }
 
-    public List<FileMetadata> filesInMyDirectory(String directory) throws IOException {
+    public List<FileDTO> filesInMyDirectory(String directory) throws IOException {
         return filesInMyDirectory(directory, 1);
     }
 
@@ -225,16 +224,16 @@ public class FileService {
         updateMyUserStorage();
     }
 
-    public List<FileMetadata> searchFiles(String fileName, String directory) throws IOException {
+    public List<FileDTO> searchFiles(String fileName, String directory) throws IOException {
         if (fileName == null || fileName.isEmpty()) {
             throw new IllegalArgumentException("File name is empty");
         }
         Stream<Path> walkStream = Files.walk(getMyUserPath(directory == null ? "" : directory));
         // Skip(1), because it starts the list with itself (directory)
         Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(fileName));
-        var filesMetadata = fileSystemService.getFilesMetadata(filteredWalkStream);
+        List<FileDTO> fileDTOs = fileSystemService.getFilesDTO(filteredWalkStream);
         walkStream.close();
-        return filesMetadata;
+        return fileDTOs;
     }
 
     @SneakyThrows
@@ -247,13 +246,5 @@ public class FileService {
         fileSystemService.deleteRecursively(finalPath);
         updateMyUserStorage();
         return true;
-    }
-
-    public List<FileDTO> assembleFileDTOList(List<FileMetadata> metadatas, List<FileLink> fileLinks) {
-        List<FileDTO> fileDTOs = new ArrayList<>();
-        for (int i = 0; i < metadatas.size(); i++) {
-            fileDTOs.add(new FileDTO(metadatas.get(i), (fileLinks != null) ? fileLinks.get(i) : null));
-        }
-        return fileDTOs;
     }
 }
