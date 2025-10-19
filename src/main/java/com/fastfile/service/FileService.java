@@ -212,7 +212,7 @@ public class FileService {
         // Remove every link from database
         if (!fileLinks.isEmpty()) {
             for (FileLink fileLink : fileLinks) {
-                Set<FileLinkShare> privateShares = fileLinkShareRepository.findAllByFileLink(fileLink);
+                Set<FileLinkShare> privateShares = fileLinkShareRepository.findAllByFileLinkUuid(fileLink.getUuid());
                 if (!privateShares.isEmpty()) {
                     fileLinkShareRepository.deleteAll(privateShares);
                 }

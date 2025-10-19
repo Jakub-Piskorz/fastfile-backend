@@ -18,7 +18,7 @@ import java.util.UUID;
 public class FileLink {
     @NonNull
     @Id
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, columnDefinition = "UUID")
     private UUID uuid;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -35,6 +35,7 @@ public class FileLink {
     @Column(nullable = false)
     private Boolean isPublic;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "fileLink")
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "file_link_uuid", referencedColumnName = "uuid")
     private List<FileLinkShare> fileLinkShares;
 }

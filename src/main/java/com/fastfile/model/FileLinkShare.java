@@ -1,8 +1,9 @@
 package com.fastfile.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.UUID;
 
 @Data
 @Entity
@@ -18,10 +19,8 @@ public class FileLinkShare {
     private Long id;
 
     @NonNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "file_link_uuid", referencedColumnName = "uuid", nullable = false)
-    @JsonIgnore // This won't be sent in HTTP response
-    private FileLink fileLink;
+    @Column(name = "file_link_uuid", nullable = false)
+    private UUID fileLinkUuid;
 
     @NonNull
     @Column(name = "shared_user_email", nullable = false)

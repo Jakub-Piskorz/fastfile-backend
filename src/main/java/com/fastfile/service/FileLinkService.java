@@ -7,6 +7,7 @@ import com.fastfile.model.FileLinkShare;
 import com.fastfile.model.User;
 import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.FileLinkShareRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -76,7 +77,7 @@ public class FileLinkService {
         // Create email shares in DB
         emails.forEach(email -> {
             FileLinkShare fileLinkShare = new FileLinkShare();
-            fileLinkShare.setFileLink(fileLink);
+            fileLinkShare.setFileLinkUuid(fileLink.getUuid());
             fileLinkShare.setSharedUserEmail(email);
             fileLinkShareRepository.save(fileLinkShare);
         });
@@ -91,7 +92,7 @@ public class FileLinkService {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElse(null);
         if (fileLink == null) return null;
 
-        Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLink(fileLink);
+        Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLinkUuid(fileLink.getUuid());
         Set<String> existingEmails = existingShares.stream().map(FileLinkShare::getSharedUserEmail).collect(Collectors.toSet());
 
         Set<String> newEmails = new HashSet<>(emails);
@@ -101,7 +102,7 @@ public class FileLinkService {
         Set<FileLinkShare> sharesToAdd = newEmails.stream().map(newEmail -> {
             FileLinkShare newShare = new FileLinkShare();
             newShare.setSharedUserEmail(newEmail);
-            newShare.setFileLink(fileLink);
+            newShare.setFileLinkUuid(fileLink.getUuid());
             return newShare;
         }).collect(Collectors.toSet());
 
@@ -121,7 +122,7 @@ public class FileLinkService {
     public boolean removeFileLink(UUID uuid) {
         FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
         if (linkToRemove == null) return false;
-        if (!linkToRemove.getIsPublic()) fileLinkShareRepository.deleteAllByFileLink(linkToRemove);
+        if (!linkToRemove.getIsPublic()) fileLinkShareRepository.deleteAllByFileLinkUuid(linkToRemove.getUuid());
         fileLinkRepository.delete(linkToRemove);
         return true;
     }
@@ -162,8 +163,12 @@ public class FileLinkService {
         User me = userService.getMe();
         List<FileLinkShare> sharedLinks = fileLinkShareRepository.findAllBySharedUserEmail(me.getEmail());
         List<FileDTO> fileDTOs = new ArrayList<>();
+        if (sharedLinks == null || sharedLinks.isEmpty()) return fileDTOs;
         for (FileLinkShare sharedLink : sharedLinks) {
-            FileLink fileLink = sharedLink.getFileLink();
+            FileLink fileLink = fileLinkRepository.findById(sharedLink.getFileLinkUuid()).orElse(null);
+            if (fileLink == null) {
+                throw new EntityNotFoundException("FileLink with id " + sharedLink.getFileLinkUuid() + " not found");
+            }
             FileDTO fileDTO = linkToDTO(fileLink);
             fileDTOs.add(fileDTO);
         }
