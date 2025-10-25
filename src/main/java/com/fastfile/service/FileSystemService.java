@@ -16,8 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 @Service
@@ -34,6 +36,12 @@ public class FileSystemService {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
         return new FileMetadata(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
                 path.toString());
+    }
+
+    int isDirectoryCompare(FileDTO a, FileDTO b) {
+        boolean aIsDir = Objects.equals(a.metadata().type(), "directory");
+        boolean bIsDir = Objects.equals(b.metadata().type(), "directory");
+        return Boolean.compare(bIsDir, aIsDir);
     }
 
     String getFileExtension(String fileName) {
@@ -65,10 +73,13 @@ public class FileSystemService {
 
     public List<FileDTO> filesInDirectory(Path directory, int maxDepth) throws IOException {
         Stream<Path> walkStream = Files.walk(directory, maxDepth).skip(1);
-        List<FileDTO> filesMetadata = getFilesDTO(walkStream);
+        List<FileDTO> files = getFilesDTO(walkStream);
         walkStream.close();
-        return filesMetadata;
+        List<FileDTO> sortedFiles = new ArrayList<>(files);
+        sortedFiles.sort(this::isDirectoryCompare);
+        return sortedFiles;
     }
+
     public List<FileDTO> filesInDirectory(Path directory) throws IOException {
         return filesInDirectory(directory, 1);
     }
