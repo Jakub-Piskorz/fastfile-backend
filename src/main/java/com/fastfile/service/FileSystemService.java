@@ -8,6 +8,7 @@ import lombok.SneakyThrows;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -32,10 +33,24 @@ public class FileSystemService {
         this.fileLinkRepository = fileLinkRepository;
     }
 
+    public boolean isEmpty(Path path) {
+        return Objects.requireNonNull(path.toFile().listFiles()).length == 0;
+    }
+
     FileMetadata getFileMetadata(Path path) throws IOException {
         var attrs = Files.readAttributes(path, BasicFileAttributes.class);
-        return new FileMetadata(path.getFileName().toString(), Files.size(path), attrs.lastModifiedTime().toMillis(), Files.isDirectory(path) ? "directory" : "file",  // Type
-                path.toString());
+        boolean isDirectory = attrs.isDirectory();
+        boolean hasFiles = false;
+        if (isDirectory) {
+            hasFiles = !isEmpty(path);
+        }
+        return new FileMetadata(
+                path.getFileName().toString(),
+                Files.size(path),
+                attrs.lastModifiedTime().toMillis(),
+                isDirectory ? "directory" : "file",
+                path.toString(), hasFiles
+        );
     }
 
     int isDirectoryCompare(FileDTO a, FileDTO b) {
@@ -78,10 +93,6 @@ public class FileSystemService {
         List<FileDTO> sortedFiles = new ArrayList<>(files);
         sortedFiles.sort(this::isDirectoryCompare);
         return sortedFiles;
-    }
-
-    public List<FileDTO> filesInDirectory(Path directory) throws IOException {
-        return filesInDirectory(directory, 1);
     }
 
     public String createDirectory(Path path) throws IOException {
