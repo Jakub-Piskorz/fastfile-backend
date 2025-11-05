@@ -12,6 +12,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,7 +32,7 @@ public class AuthControllerIT {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest").withReuse(true);
 
 
     @Test
@@ -66,6 +67,7 @@ public class AuthControllerIT {
     }
 
     @Test
+    @Sql(scripts = "/schema.sql")
     public void testUserLoginIT() {
         UserLoginDTO userLoginDTO = new UserLoginDTO("testUser", "secretPassword");
         String jwtToken = restTemplate.postForObject("/auth/login", userLoginDTO, String.class);

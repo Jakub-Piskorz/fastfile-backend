@@ -1,7 +1,19 @@
-INSERT INTO _user
-values (email: "example@example.com",
-        first_name: "testFirstname",
-        last_name: "testLastname",
-        password: "secretPassword",
-        username: "testUser"
-        );
+INSERT INTO _user (
+    email,
+    first_name,
+    last_name,
+    password,
+    username,
+    used_storage,
+    user_type
+)
+VALUES (
+           'example@example.com',
+           'testFirstname',
+           'testLastname',
+           -- Actual password: "secretPassword"
+           '$2a$10$M8OifbnBh7y9PyOrTObzS.cq6MuOFR87dws9cET6MajFMjWQnJs9u',
+           'testUser',
+           0,
+           'free'
+       );
