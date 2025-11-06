@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -34,8 +35,8 @@ public class UserServiceIT {
         final User testUser = new User(
                 "test",
                 "test@test.com",
-                "Testfirstname",
-                "Testlastname",
+                "TestFirstname",
+                "TestLastname",
                 "secretPassword"
         );
         userRepository.save(testUser);
@@ -63,8 +64,9 @@ public class UserServiceIT {
     }
 //
     @Test
-    public void testThatUserServiceFindsQbek() {
+    @Sql(scripts = "/schema.sql")
+    public void findTestUser() {
         final Optional<User> result = userRepository.findByUsername("test");
-        assertThat(result.orElseThrow().getLastName()).isEqualTo("Testlastname");
+        assertThat(result.orElseThrow().getLastName()).isEqualTo("TestLastname");
     }
 }
