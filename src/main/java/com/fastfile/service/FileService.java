@@ -14,12 +14,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -234,6 +240,10 @@ public class FileService {
         List<FileDTO> fileDTOs = fileSystemService.getFilesDTO(filteredWalkStream);
         walkStream.close();
         return fileDTOs;
+    }
+
+    public List<FileDTO> searchFiles(String fileName) throws IOException {
+        return searchFiles(fileName, null);
     }
 
     @SneakyThrows

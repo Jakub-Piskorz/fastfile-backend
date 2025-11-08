@@ -1,4 +1,4 @@
-package com.fastfile.service;
+package com.fastfile.controller;
 
 import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.UserDTO;

@@ -62,7 +62,7 @@ public class UserServiceIT {
         assertThat(registeredUser.getUsername()).isEqualTo(user.getUsername());
         assertThat(registeredUser.getPassword()).isEqualTo(user.getPassword());
     }
-//
+
     @Test
     @Sql(scripts = "/schema.sql")
     public void findTestUser() {

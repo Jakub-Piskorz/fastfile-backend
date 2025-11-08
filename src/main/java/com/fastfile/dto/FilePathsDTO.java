@@ -1,6 +1,6 @@
 package com.fastfile.dto;
 
-import java.util.ArrayList;
+import java.util.List;
 
-public record FilePathsDTO(ArrayList<String> filePaths) {
+public record FilePathsDTO(List<String> filePaths) {
 }
