@@ -4,7 +4,6 @@ import com.fastfile.auth.JwtService;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.UserLoginDTO;
-import com.fastfile.model.FileMetadata;
 import com.fastfile.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.*;
@@ -14,7 +13,6 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
@@ -228,9 +226,7 @@ public class FileServiceIT {
 
     @Test
     void deleteNonExistingFile() {
-        Assertions.assertThrows(IOException.class, () -> {
-            fileService.delete("nonexistent.txt");
-        });
+        Assertions.assertThrows(IOException.class, () -> fileService.delete("nonexistent.txt"));
     }
 
     @Test
@@ -259,7 +255,7 @@ public class FileServiceIT {
         assertThat(response.getBody()).isNotNull();
 
         // Check headers
-        String contentType = response.getHeaders().getContentType().toString();
+        String contentType = Objects.requireNonNull(response.getHeaders().getContentType()).toString();
         assertThat(contentType).isIn("application/zip", "application/x-zip-compressed");
         assertThat(response.getHeaders().getContentDisposition().getFilename()).isEqualTo("download.zip");
 
