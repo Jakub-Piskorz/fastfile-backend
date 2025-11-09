@@ -4,6 +4,7 @@ import com.fastfile.auth.JwtService;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.UserLoginDTO;
+import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.*;
@@ -63,6 +64,8 @@ public class FileServiceIT {
     private static final Long TEST_USER_ID = -1L;
     private static final Path TEST_USER_DIR = Paths.get(FILES_ROOT, TEST_USER_ID.toString());
     private static final AtomicBoolean sqlInjected = new AtomicBoolean(false);
+    @Autowired
+    private UserService userService;
 
     @BeforeEach
     void setup() throws IOException {
@@ -226,7 +229,7 @@ public class FileServiceIT {
 
     @Test
     void deleteNonExistingFile() {
-        Assertions.assertThrows(IOException.class, () -> fileService.delete("nonexistent.txt"));
+        assertThrows(IOException.class, () -> fileService.delete("nonexistent.txt"));
     }
 
     @Test
@@ -274,5 +277,33 @@ public class FileServiceIT {
 
             assertThat(entryNames).containsExactlyInAnyOrder("update.txt", "update2.txt");
         }
+    }
+
+    @Test
+    void uploadWhenStorageExceeded() throws IOException {
+        // Fake full storage
+        jdbcTemplate.execute("UPDATE _user SET used_storage = 99999999999 WHERE id = -1;");
+        MockMultipartFile file = new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
+        boolean result = fileService.uploadFile(file, "/");
+        assertThat(result).isFalse();
+
+        // Cleanup
+        fileService.updateMyUserStorage();
+    }
+
+    @Test
+    void userTypes() {
+        User user = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(user.getUserType()).isEqualTo("free");
+
+        boolean result = userService.updateMyUserType("premium");
+        assertThat(result).isTrue();
+        user = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(user.getUserType()).isEqualTo("premium");
+
+        result = userService.updateMyUserType("incorrect-type");
+        assertThat(result).isFalse();
+        user = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(user.getUserType()).isEqualTo("premium");
     }
 }
