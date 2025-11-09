@@ -1,6 +1,7 @@
 package com.fastfile.service;
 
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.UserLoginDTO;
@@ -281,14 +282,49 @@ public class FileServiceIT {
 
     @Test
     void uploadWhenStorageExceeded() throws IOException {
-        // Fake full storage
-        jdbcTemplate.execute("UPDATE _user SET used_storage = 99999999999 WHERE id = -1;");
+        // Simulate upload exceeding user free storage limit
+        long almostFreeLimit = userService.freeLimit-4;
+        jdbcTemplate.execute("UPDATE _user SET used_storage =" + almostFreeLimit + " WHERE id = -1;");
+        assertThat(userService.getMyUsedStorage()).isEqualTo(almostFreeLimit);
         MockMultipartFile file = new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
         boolean result = fileService.uploadFile(file, "/");
+
+        // Assert that upload failed due to surpassing free storage limit.
+        assertThat(result).isFalse();
+
+        // Check if user became premium
+        result = userService.updateMyUserType("premium");
+        User user = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(result).isTrue();
+        assertThat(user.getUserType()).isEqualTo("premium");
+
+        // Assert that upload succeeded after upgrating user storage to premium.
+        result = fileService.uploadFile(file, "/");
+        assertThat(result).isTrue();
+
+        // Remove file
+        fileService.delete("update.txt");
+
+        // Check if user used storage has been updated after file removal
+        assertThat(userService.getMyUsedStorage()).isEqualTo(0L);
+
+        // Simulate upload exceeding user premium storage limit
+        long almostPremiumLimit = userService.premiumLimit-4;
+        jdbcTemplate.execute("UPDATE _user SET used_storage =" + almostPremiumLimit + " WHERE id = -1;");
+        assertThat(userService.getMyUsedStorage()).isEqualTo(almostPremiumLimit);
+        result = fileService.uploadFile(file, "/");
+
+        // Assert that upload failed due to surpassing premium storage limit.
         assertThat(result).isFalse();
 
         // Cleanup
         fileService.updateMyUserStorage();
+        userService.updateMyUserType("free");
+
+        // Tests after cleanup
+        assertThat(userService.getMyUsedStorage()).isEqualTo(0L);
+        user =  userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(user.getUserType()).isEqualTo("free");
     }
 
     @Test
@@ -305,5 +341,8 @@ public class FileServiceIT {
         assertThat(result).isFalse();
         user = userRepository.findById(TEST_USER_ID).orElseThrow();
         assertThat(user.getUserType()).isEqualTo("premium");
+
+        // Cleanup
+        userService.updateMyUserType("free");
     }
 }

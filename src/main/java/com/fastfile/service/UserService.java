@@ -28,9 +28,9 @@ public class UserService {
     }
 
     @Value("${storage.limits.free}")
-    private long freeLimit;
+    public long freeLimit;
     @Value("${storage.limits.premium}")
-    private long premiumLimit;
+    public long premiumLimit;
 
     public UserDTO register(User user) throws IOException {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
