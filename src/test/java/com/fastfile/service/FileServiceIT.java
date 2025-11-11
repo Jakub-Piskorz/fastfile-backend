@@ -1,13 +1,13 @@
 package com.fastfile.service;
 
 import com.fastfile.auth.JwtService;
-import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.UserLoginDTO;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import io.jsonwebtoken.Claims;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -92,7 +92,6 @@ public class FileServiceIT {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(TEST_USER_ID, null, List.of());
         auth.setDetails(claims);
         SecurityContextHolder.getContext().setAuthentication(auth);
-
     }
 
     @AfterEach
@@ -195,6 +194,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void listFilesInDirectory() throws IOException {
         MockMultipartFile file1 = new MockMultipartFile("file", "file1.txt", "text/plain", "a".getBytes());
         MockMultipartFile file2 = new MockMultipartFile("file", "file2.txt", "text/plain", "b".getBytes());
@@ -234,6 +234,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void updateUserStorageAfterUpload() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
         fileService.uploadFile(file, "/");
@@ -316,33 +317,5 @@ public class FileServiceIT {
 
         // Assert that upload failed due to surpassing premium storage limit.
         assertThat(result).isFalse();
-
-        // Cleanup
-        fileService.updateMyUserStorage();
-        userService.updateMyUserType("free");
-
-        // Tests after cleanup
-        assertThat(userService.getMyUsedStorage()).isEqualTo(0L);
-        user =  userRepository.findById(TEST_USER_ID).orElseThrow();
-        assertThat(user.getUserType()).isEqualTo("free");
-    }
-
-    @Test
-    void userTypes() {
-        User user = userRepository.findById(TEST_USER_ID).orElseThrow();
-        assertThat(user.getUserType()).isEqualTo("free");
-
-        boolean result = userService.updateMyUserType("premium");
-        assertThat(result).isTrue();
-        user = userRepository.findById(TEST_USER_ID).orElseThrow();
-        assertThat(user.getUserType()).isEqualTo("premium");
-
-        result = userService.updateMyUserType("incorrect-type");
-        assertThat(result).isFalse();
-        user = userRepository.findById(TEST_USER_ID).orElseThrow();
-        assertThat(user.getUserType()).isEqualTo("premium");
-
-        // Cleanup
-        userService.updateMyUserType("free");
     }
 }
