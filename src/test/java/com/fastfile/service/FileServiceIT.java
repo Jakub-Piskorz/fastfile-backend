@@ -97,7 +97,9 @@ public class FileServiceIT {
     @AfterEach
     void cleanTestDirectory() throws IOException {
         File testUserDir = new File(FILES_ROOT, TEST_USER_ID.toString());
-        FileUtils.cleanDirectory(testUserDir);
+        if (Files.exists(testUserDir.toPath())) {
+            FileUtils.cleanDirectory(testUserDir);
+        }
     }
 
     @AfterAll
@@ -317,5 +319,28 @@ public class FileServiceIT {
 
         // Assert that upload failed due to surpassing premium storage limit.
         assertThat(result).isFalse();
+    }
+
+    @Test
+    @Transactional
+    void removeAllFiles() throws IOException {
+        String res = fileService.createMyPersonalDirectory("test");
+        assertThat(res).isNull();
+        MockMultipartFile file =
+                new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
+        MockMultipartFile file2 = new MockMultipartFile("file", "update2.txt", "text/plain", "22345".getBytes());
+        fileService.uploadFile(file, "/");
+        fileService.uploadFile(file2, "/");
+        fileService.uploadFile(file, "/test");
+        fileService.uploadFile(file2, "/test");
+        assertThat(fileService.filesInMyDirectory("/")).hasSize(3);
+        assertThat(fileService.filesInMyDirectory("")).hasSize(3);
+        assertThat(fileService.filesInMyDirectory("test")).hasSize(2);
+
+        System.out.println(Files.exists(fileService.getMyUserPath()));
+        boolean success = fileService.deleteMyPersonalDirectory();
+        assertThat(success).isTrue();
+        assertThat(fileService.filesInMyDirectory("test")).hasSize(0);
+        assertThat(fileService.filesInMyDirectory("/")).hasSize(0);
     }
 }

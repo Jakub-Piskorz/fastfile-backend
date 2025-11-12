@@ -257,4 +257,15 @@ public class FileService {
         updateMyUserStorage();
         return true;
     }
+
+    public boolean deleteMyPersonalDirectory() throws IOException {
+        Path path = getMyUserPath().toAbsolutePath();
+        boolean doesPathExist = Files.exists(path);
+        if (doesPathExist) {
+            fileSystemService.deleteRecursively(path);
+            updateMyUserStorage();
+            return true;
+        }
+        return false;
+    }
 }
