@@ -343,8 +343,6 @@ public class FileServiceIT {
     @Test
     @Transactional
     void deleteMe() throws IOException {
-        User me = userService.getMe();
-        System.out.println(me);
 
         String res = fileService.createMyPersonalDirectory("test");
         assertThat(res).isNull();
@@ -353,9 +351,6 @@ public class FileServiceIT {
         MockMultipartFile file2 = new MockMultipartFile("file", "update2.txt", "text/plain", "22345".getBytes());
         MockMultipartFile file3 = new MockMultipartFile("file", "update3.txt", "text/plain", "33345".getBytes());
         MockMultipartFile file4 = new MockMultipartFile("file", "update4.txt", "text/plain", "33345".getBytes());
-
-        me = userService.getMe();
-        System.out.println(me);
 
         boolean result = fileService.uploadFile(file, "/");
         assertThat(result).isTrue();
@@ -369,13 +364,14 @@ public class FileServiceIT {
         assertThat(fileService.filesInMyDirectory("")).hasSize(3);
         assertThat(fileService.filesInMyDirectory("test")).hasSize(2);
 
-        System.out.println(Files.exists(fileService.getMyUserPath()));
         boolean success = fileService.deleteMe();
         assertThat(success).isTrue();
         assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory(""));
         assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("/"));
         assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("test"));
-        me = userService.getMe();
+
+        // Check if user is deleted
+        User me = userService.getMe();
         assertThat(me).isNull();
     }
 }
