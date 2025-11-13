@@ -28,6 +28,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -80,7 +81,9 @@ public class FileServiceIT {
                 throw new RuntimeException("Failed to load schema.sql", e);
             }
 
-            // Create user folder
+        }
+        // Create user folder
+        if (Files.notExists(TEST_USER_DIR)) {
             Files.createDirectories(TEST_USER_DIR);
         }
 
@@ -99,6 +102,9 @@ public class FileServiceIT {
         File testUserDir = new File(FILES_ROOT, TEST_USER_ID.toString());
         if (Files.exists(testUserDir.toPath())) {
             FileUtils.cleanDirectory(testUserDir);
+            User me = userRepository.findById(TEST_USER_ID).orElseThrow();
+            me.setUsedStorage(0L);
+            userRepository.save(me);
         }
     }
 
@@ -121,7 +127,9 @@ public class FileServiceIT {
 
     @Test
     void userExists() {
-        assertThat(userRepository.existsById(TEST_USER_ID)).isTrue();
+        User me = userRepository.findById(TEST_USER_ID).orElseThrow();
+        assertThat(me).isNotNull();
+        assertThat(me.getUsedStorage()).isZero();
     }
 
     @Test
@@ -138,7 +146,9 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void deleteFileTest() throws IOException {
+        assertThat(Files.exists(TEST_USER_DIR)).isTrue();
         Path tempFile = Files.createTempFile(TEST_USER_DIR, "delete", ".txt");
         fileService.delete(tempFile.getFileName().toString());
         assertThat(Files.exists(tempFile)).isFalse();
@@ -284,10 +294,18 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void uploadWhenStorageExceeded() throws IOException {
+        long almostFreeLimit = userService.freeLimit - 4;
+        long almostPremiumLimit = userService.premiumLimit - 4;
+
+        User me = userService.getMe();
+        assertThat(me.getUsedStorage()).isEqualTo(0L);
+
         // Simulate upload exceeding user free storage limit
-        long almostFreeLimit = userService.freeLimit-4;
-        jdbcTemplate.execute("UPDATE _user SET used_storage =" + almostFreeLimit + " WHERE id = -1;");
+        me = userService.getMe();
+        me.setUsedStorage(almostFreeLimit);
+        userRepository.save(me);
         assertThat(userService.getMyUsedStorage()).isEqualTo(almostFreeLimit);
         MockMultipartFile file = new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
         boolean result = fileService.uploadFile(file, "/");
@@ -312,8 +330,9 @@ public class FileServiceIT {
         assertThat(userService.getMyUsedStorage()).isEqualTo(0L);
 
         // Simulate upload exceeding user premium storage limit
-        long almostPremiumLimit = userService.premiumLimit-4;
-        jdbcTemplate.execute("UPDATE _user SET used_storage =" + almostPremiumLimit + " WHERE id = -1;");
+        me = userService.getMe();
+        me.setUsedStorage(almostPremiumLimit);
+        userRepository.save(user);
         assertThat(userService.getMyUsedStorage()).isEqualTo(almostPremiumLimit);
         result = fileService.uploadFile(file, "/");
 
@@ -323,24 +342,40 @@ public class FileServiceIT {
 
     @Test
     @Transactional
-    void removeAllFiles() throws IOException {
+    void deleteMe() throws IOException {
+        User me = userService.getMe();
+        System.out.println(me);
+
         String res = fileService.createMyPersonalDirectory("test");
         assertThat(res).isNull();
         MockMultipartFile file =
                 new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
         MockMultipartFile file2 = new MockMultipartFile("file", "update2.txt", "text/plain", "22345".getBytes());
-        fileService.uploadFile(file, "/");
-        fileService.uploadFile(file2, "/");
-        fileService.uploadFile(file, "/test");
-        fileService.uploadFile(file2, "/test");
+        MockMultipartFile file3 = new MockMultipartFile("file", "update3.txt", "text/plain", "33345".getBytes());
+        MockMultipartFile file4 = new MockMultipartFile("file", "update4.txt", "text/plain", "33345".getBytes());
+
+        me = userService.getMe();
+        System.out.println(me);
+
+        boolean result = fileService.uploadFile(file, "/");
+        assertThat(result).isTrue();
+        result = fileService.uploadFile(file2, "/");
+        assertThat(result).isTrue();
+        result = fileService.uploadFile(file3, "/test");
+        assertThat(result).isTrue();
+        result = fileService.uploadFile(file4, "/test");
+        assertThat(result).isTrue();
         assertThat(fileService.filesInMyDirectory("/")).hasSize(3);
         assertThat(fileService.filesInMyDirectory("")).hasSize(3);
         assertThat(fileService.filesInMyDirectory("test")).hasSize(2);
 
         System.out.println(Files.exists(fileService.getMyUserPath()));
-        boolean success = fileService.deleteMyPersonalDirectory();
+        boolean success = fileService.deleteMe();
         assertThat(success).isTrue();
-        assertThat(fileService.filesInMyDirectory("test")).hasSize(0);
-        assertThat(fileService.filesInMyDirectory("/")).hasSize(0);
+        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory(""));
+        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("/"));
+        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("test"));
+        me = userService.getMe();
+        assertThat(me).isNull();
     }
 }

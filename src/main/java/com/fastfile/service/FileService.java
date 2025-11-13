@@ -86,7 +86,8 @@ public class FileService {
 
     boolean isMyStorageLimitExceeded(long newFileSize) {
         long currentUsage = userService.getMyUsedStorage();
-        return (currentUsage + newFileSize) > userService.getMyUserStorageLimit();
+        long myStorageLimit = userService.getMyUserStorageLimit();
+        return (currentUsage + newFileSize) > myStorageLimit;
     }
 
     public void updateUserStorage(long userId) throws IOException {
@@ -258,14 +259,27 @@ public class FileService {
         return true;
     }
 
-    public boolean deleteMyPersonalDirectory() throws IOException {
-        Path path = getMyUserPath().toAbsolutePath();
-        boolean doesPathExist = Files.exists(path);
-        if (doesPathExist) {
-            fileSystemService.deleteRecursively(path);
-            updateMyUserStorage();
-            return true;
+    public boolean deleteMe() {
+        Path myUserPath = getMyUserPath().toAbsolutePath();
+        User me = userService.getMe();
+        boolean myPathExists = Files.exists(myUserPath);
+        if (myPathExists) {
+            fileSystemService.deleteRecursively(myUserPath);
+            me.setUsedStorage(null);
+            userRepository.save(me);
         }
-        return false;
+
+        List<FileLink> myLinks = fileLinkRepository.findAllByOwnerId(me.getId());
+        if (!myLinks.isEmpty()) {
+            for (FileLink myLink : myLinks) {
+                Set<FileLinkShare> linkShares = fileLinkShareRepository.findAllByFileLinkUuid(myLink.getUuid());
+                if (!linkShares.isEmpty()) {
+                    fileLinkShareRepository.deleteAll(linkShares);
+                }
+            }
+            fileLinkRepository.deleteAll(myLinks);
+        }
+        userRepository.delete(me);
+        return true;
     }
 }

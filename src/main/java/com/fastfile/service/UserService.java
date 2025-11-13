@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -20,11 +21,13 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+    private final FileSystemService fileSystemService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService, FileSystemService fileSystemService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
+        this.fileSystemService = fileSystemService;
     }
 
     @Value("${storage.limits.free}")
@@ -86,4 +89,17 @@ public class UserService {
         return getUsedStorage(getMe().getId());
     }
 
+    public boolean deleteMe() {
+        User user = userRepository.findById(getMe().getId()).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        Path myPath = Paths.get(FILES_ROOT + "/" + user.getId());
+        if (Files.exists(myPath)) {
+            fileSystemService.deleteRecursively(myPath);
+        }
+
+        userRepository.delete(user);
+        return true;
+    }
 }
