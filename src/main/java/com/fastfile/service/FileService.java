@@ -208,6 +208,11 @@ public class FileService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            try {
+                Files.deleteIfExists(tempPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         });
         return ResponseEntity.ok().headers(zippedFile.headers()).body(zippedFile.body());
     }
