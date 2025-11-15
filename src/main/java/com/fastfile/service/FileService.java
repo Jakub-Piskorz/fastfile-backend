@@ -35,7 +35,6 @@ import static com.fastfile.service.FileSystemService.FILES_ROOT;
 @Service
 public class FileService {
 
-    private final AuthService authService;
     private final UserService userService;
     private final UserRepository userRepository;
     private final FileLinkRepository fileLinkRepository;
@@ -43,36 +42,12 @@ public class FileService {
     private final FileLinkShareRepository fileLinkShareRepository;
 
 
-    public FileService(AuthService authService, UserService userService, UserRepository userRepository, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService, FileLinkShareRepository fileLinkShareRepository) {
-        this.authService = authService;
+    public FileService(UserService userService, UserRepository userRepository, FileLinkRepository fileLinkRepository, FileSystemService fileSystemService, FileLinkShareRepository fileLinkShareRepository) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.fileLinkRepository = fileLinkRepository;
         this.fileSystemService = fileSystemService;
         this.fileLinkShareRepository = fileLinkShareRepository;
-    }
-
-    Path getMyUserPath(String directory) {
-        if (directory == null) directory = "";
-
-        // 🔒 Safety check against unsafe paths.
-        Path path = Paths.get(directory);
-        if (directory.contains("\u0000") || path.isAbsolute()) {
-            throw new IllegalArgumentException("Unsafe path");
-        }
-        Path normalized = path.normalize();
-        for (Path part : normalized) {
-            if (part.toString().equals("..")) {
-                throw new IllegalArgumentException("Unsafe path");
-            }
-        }
-
-        Long userId = authService.getMyUserId();
-        return Paths.get(FILES_ROOT + userId + "/" + directory);
-    }
-
-    Path getMyUserPath() {
-        return getMyUserPath("");
     }
 
     long bytesInside(Path path) throws IOException {
@@ -91,7 +66,7 @@ public class FileService {
     }
 
     public void updateUserStorage(long userId) throws IOException {
-        long myCurrentUsage = bytesInside(getMyUserPath());
+        long myCurrentUsage = bytesInside(userService.getMyUserPath());
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             throw new RuntimeException("User not found");
@@ -122,8 +97,8 @@ public class FileService {
             filePath = "";
         }
 
-        Path path = getMyUserPath(filePath).normalize();
-        Path pathWithFile = getMyUserPath(filePath).resolve(Objects.requireNonNull(file.getOriginalFilename()));
+        Path path = userService.getMyUserPath(filePath).normalize();
+        Path pathWithFile = userService.getMyUserPath(filePath).resolve(Objects.requireNonNull(file.getOriginalFilename()));
 
         // Check if path exists
         if (!Files.exists(path)) {
@@ -140,7 +115,7 @@ public class FileService {
     }
 
     public List<FileDTO> filesInMyDirectory(String directory, int maxDepth) throws IOException {
-        Path path = getMyUserPath(directory);
+        Path path = userService.getMyUserPath(directory);
         return fileSystemService.filesInDirectory(path, maxDepth);
     }
 
@@ -149,12 +124,12 @@ public class FileService {
     }
 
     public String createMyPersonalDirectory(String path) throws IOException {
-        Path pathForDir = getMyUserPath(path);
+        Path pathForDir = userService.getMyUserPath(path);
         return fileSystemService.createDirectory(pathForDir);
     }
 
     public ResponseEntity<StreamingResponseBody> downloadFile(String filePath) throws IOException {
-        Path fullFilePath = getMyUserPath(filePath);
+        Path fullFilePath = userService.getMyUserPath(filePath);
 
         var file = fileSystemService.prepareFileForDownload(fullFilePath);
         if (file == null) {
@@ -176,7 +151,7 @@ public class FileService {
         ZipOutputStream zipOut = new ZipOutputStream(fos);
 
         for (String filePath : filePaths.filePaths()) {
-            Path finalFilePath = getMyUserPath(filePath);
+            Path finalFilePath = userService.getMyUserPath(filePath);
             File fileToZip = new File(finalFilePath.toString());
             FileInputStream fis = new FileInputStream(fileToZip);
             ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
@@ -218,7 +193,7 @@ public class FileService {
     }
 
     public void delete(String filePath) throws IOException, NullPointerException {
-        Path path = getMyUserPath(filePath).normalize();
+        Path path = userService.getMyUserPath(filePath).normalize();
         Set<FileLink> fileLinks = fileLinkRepository.findAllByPath(path.toString());
 
         // Remove every link from database
@@ -240,7 +215,7 @@ public class FileService {
         if (fileName == null || fileName.isEmpty()) {
             throw new IllegalArgumentException("File name is empty");
         }
-        Stream<Path> walkStream = Files.walk(getMyUserPath(directory == null ? "" : directory));
+        Stream<Path> walkStream = Files.walk(userService.getMyUserPath(directory == null ? "" : directory));
         // Skip(1), because it starts the list with itself (directory)
         Stream<Path> filteredWalkStream = walkStream.skip(1).filter(f -> f.getFileName().toString().contains(fileName));
         List<FileDTO> fileDTOs = fileSystemService.getFilesDTO(filteredWalkStream);
@@ -254,37 +229,13 @@ public class FileService {
 
     @SneakyThrows
     public boolean deleteRecursively(String directory) {
-        Path baseDir = getMyUserPath().toAbsolutePath();
-        Path finalPath = getMyUserPath(directory);
+        Path baseDir = userService.getMyUserPath().toAbsolutePath();
+        Path finalPath = userService.getMyUserPath(directory);
         if (finalPath.toAbsolutePath().equals(baseDir)) {
             return false;
         }
         fileSystemService.deleteRecursively(finalPath);
         updateMyUserStorage();
-        return true;
-    }
-
-    public boolean deleteMe() {
-        Path myUserPath = getMyUserPath().toAbsolutePath();
-        User me = userService.getMe();
-        boolean myPathExists = Files.exists(myUserPath);
-        if (myPathExists) {
-            fileSystemService.deleteRecursively(myUserPath);
-            me.setUsedStorage(null);
-            userRepository.save(me);
-        }
-
-        List<FileLink> myLinks = fileLinkRepository.findAllByOwnerId(me.getId());
-        if (!myLinks.isEmpty()) {
-            for (FileLink myLink : myLinks) {
-                Set<FileLinkShare> linkShares = fileLinkShareRepository.findAllByFileLinkUuid(myLink.getUuid());
-                if (!linkShares.isEmpty()) {
-                    fileLinkShareRepository.deleteAll(linkShares);
-                }
-            }
-            fileLinkRepository.deleteAll(myLinks);
-        }
-        userRepository.delete(me);
         return true;
     }
 }

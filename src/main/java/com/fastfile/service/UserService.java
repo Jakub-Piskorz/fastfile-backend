@@ -21,13 +21,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
-    private final FileSystemService fileSystemService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService, FileSystemService fileSystemService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
-        this.fileSystemService = fileSystemService;
     }
 
     @Value("${storage.limits.free}")
@@ -89,17 +87,26 @@ public class UserService {
         return getUsedStorage(getMe().getId());
     }
 
-    public boolean deleteMe() {
-        User user = userRepository.findById(getMe().getId()).orElse(null);
-        if (user == null) {
-            return false;
+    public Path getMyUserPath(String directory) {
+        if (directory == null) directory = "";
+
+        // 🔒 Safety check against unsafe paths.
+        Path path = Paths.get(directory);
+        if (directory.contains("\u0000") || path.isAbsolute()) {
+            throw new IllegalArgumentException("Unsafe path");
         }
-        Path myPath = Paths.get(FILES_ROOT + "/" + user.getId());
-        if (Files.exists(myPath)) {
-            fileSystemService.deleteRecursively(myPath);
+        Path normalized = path.normalize();
+        for (Path part : normalized) {
+            if (part.toString().equals("..")) {
+                throw new IllegalArgumentException("Unsafe path");
+            }
         }
 
-        userRepository.delete(user);
-        return true;
+        Long userId = authService.getMyUserId();
+        return Paths.get(FILES_ROOT + userId + "/" + directory);
+    }
+
+    public Path getMyUserPath() {
+        return getMyUserPath("");
     }
 }

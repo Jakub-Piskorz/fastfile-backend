@@ -28,7 +28,6 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -338,40 +337,5 @@ public class FileServiceIT {
 
         // Assert that upload failed due to surpassing premium storage limit.
         assertThat(result).isFalse();
-    }
-
-    @Test
-    @Transactional
-    void deleteMe() throws IOException {
-
-        String res = fileService.createMyPersonalDirectory("test");
-        assertThat(res).isNull();
-        MockMultipartFile file =
-                new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
-        MockMultipartFile file2 = new MockMultipartFile("file", "update2.txt", "text/plain", "22345".getBytes());
-        MockMultipartFile file3 = new MockMultipartFile("file", "update3.txt", "text/plain", "33345".getBytes());
-        MockMultipartFile file4 = new MockMultipartFile("file", "update4.txt", "text/plain", "33345".getBytes());
-
-        boolean result = fileService.uploadFile(file, "/");
-        assertThat(result).isTrue();
-        result = fileService.uploadFile(file2, "/");
-        assertThat(result).isTrue();
-        result = fileService.uploadFile(file3, "/test");
-        assertThat(result).isTrue();
-        result = fileService.uploadFile(file4, "/test");
-        assertThat(result).isTrue();
-        assertThat(fileService.filesInMyDirectory("/")).hasSize(3);
-        assertThat(fileService.filesInMyDirectory("")).hasSize(3);
-        assertThat(fileService.filesInMyDirectory("test")).hasSize(2);
-
-        boolean success = fileService.deleteMe();
-        assertThat(success).isTrue();
-        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory(""));
-        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("/"));
-        assertThrows(NoSuchFileException.class, () -> fileService.filesInMyDirectory("test"));
-
-        // Check if user is deleted
-        User me = userService.getMe();
-        assertThat(me).isNull();
     }
 }
