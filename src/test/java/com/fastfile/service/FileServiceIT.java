@@ -3,7 +3,6 @@ package com.fastfile.service;
 import com.fastfile.auth.JwtService;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
-import com.fastfile.dto.UserLoginDTO;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -11,7 +10,6 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -20,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -31,7 +30,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -43,8 +41,6 @@ import static org.junit.Assert.assertThrows;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class FileServiceIT {
-    @Autowired
-    TestRestTemplate restTemplate;
 
     @Container
     @ServiceConnection
@@ -56,21 +52,22 @@ public class FileServiceIT {
     @Autowired
     private FileService fileService;
 
+    // CONFIGURATION
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private AuthService authService;
 
     private static final Long TEST_USER_ID = -1L;
     private static final Path TEST_USER_DIR = Paths.get(FILES_ROOT, TEST_USER_ID.toString());
-    private static final AtomicBoolean sqlInjected = new AtomicBoolean(false);
-    @Autowired
-    private UserService userService;
 
-    @BeforeEach
+    @BeforeTransaction
     void setup() throws IOException {
-        if (sqlInjected.compareAndSet(false, true)) {
+        if (userRepository.findById(TEST_USER_ID).isEmpty()) {
             // Load schema.sql once
             Resource resource = new ClassPathResource("schema.sql");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
@@ -87,8 +84,7 @@ public class FileServiceIT {
         }
 
         // SecurityContext for service tests
-        UserLoginDTO loginDTO = new UserLoginDTO("testUser", "secretPassword");
-        String jwtToken = restTemplate.postForObject("/auth/login", loginDTO, String.class);
+        String jwtToken = authService.authenticate("testUser", "secretPassword");
         Claims claims = jwtService.extractClaims(jwtToken);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(TEST_USER_ID, null, List.of());
@@ -101,9 +97,6 @@ public class FileServiceIT {
         File testUserDir = new File(FILES_ROOT, TEST_USER_ID.toString());
         if (Files.exists(testUserDir.toPath())) {
             FileUtils.cleanDirectory(testUserDir);
-            User me = userRepository.findById(TEST_USER_ID).orElseThrow();
-            me.setUsedStorage(0L);
-            userRepository.save(me);
         }
     }
 
@@ -117,6 +110,7 @@ public class FileServiceIT {
         }
         SecurityContextHolder.clearContext();
     }
+    // END CONFIGURATION
 
     @Test
     void connectionEstablished() {
@@ -132,6 +126,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void uploadFileTest() throws IOException {
         String content = "Hello FastFile!";
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -155,6 +150,7 @@ public class FileServiceIT {
 
 
     @Test
+    @Transactional
     void deleteRecursivelyDirectory() throws IOException {
         fileService.createMyPersonalDirectory("toDelete/subDir");
         MockMultipartFile file = new MockMultipartFile("file", "f.txt", "text/plain", "c".getBytes());
@@ -166,6 +162,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void downloadFileExists() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "download.txt", "text/plain", "data".getBytes());
         fileService.uploadFile(file, "/");
@@ -180,6 +177,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void searchFilesByName() throws IOException {
         MockMultipartFile fileA = new MockMultipartFile("file", "a_test.txt", "text/plain", "data".getBytes());
         MockMultipartFile fileB = new MockMultipartFile("file", "b_test.txt", "text/plain", "data".getBytes());
@@ -240,6 +238,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void deleteNonExistingFile() {
         assertThrows(IOException.class, () -> fileService.delete("nonexistent.txt"));
     }
@@ -256,6 +255,7 @@ public class FileServiceIT {
     }
 
     @Test
+    @Transactional
     void downloadMultiple() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "update.txt", "text/plain", "12345".getBytes());
         fileService.uploadFile(file, "/");

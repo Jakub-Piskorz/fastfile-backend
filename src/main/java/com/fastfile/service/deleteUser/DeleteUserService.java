@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
+
+import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class DeleteUserService {
@@ -35,10 +38,10 @@ public class DeleteUserService {
     }
 
     public boolean deleteUser(User user) {
-        Path myUserPath = userService.getMyUserPath().toAbsolutePath();
-        boolean myPathExists = Files.exists(myUserPath);
+        Path userPath = Paths.get(FILES_ROOT, user.getId().toString()).toAbsolutePath();
+        boolean myPathExists = Files.exists(userPath);
         if (myPathExists) {
-            fileSystemService.deleteRecursively(myUserPath);
+            fileSystemService.deleteRecursively(userPath);
             user.setUsedStorage(null);
             userRepository.save(user);
         }
