@@ -6,7 +6,19 @@ spring:
   profiles:
     active: dev
 
-storage: # Keep this block here, even if it's a duplicate of main. Test fails if it's gone, for some reason.
+  # Hikari settings for faster test execution.
+  # Reduce max-lifetime/idle-timeout if tests hang; increase if connections are closed too early mid-test.
+  datasource:
+    hikari:
+      maximum-pool-size: 5            # keep it small for tests
+      minimum-idle: 1
+      max-lifetime: 15000             # 15 seconds
+      idle-timeout: 5000              # 10 seconds
+      connection-timeout: 3000        # 3 seconds
+      leak-detection-threshold: 5000  # optional, catch leaks fast
+
+# Keep this block here, even if it's a duplicate of main. Test fails if it's gone, for some reason.
+storage:
   limits:
     free: 21474836480     # 20 GB in bytes
     premium: 107374182400 # 100 GB in bytes
