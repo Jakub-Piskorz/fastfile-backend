@@ -170,9 +170,9 @@ public class AuthControllerIT {
         // Change user type to "premium"
         UserTypeDTO userTypeDTO = new UserTypeDTO("premium");
         HttpEntity<UserTypeDTO> customRequestEntity = new HttpEntity<>(userTypeDTO, httpRequestEntity.getHeaders());
-        ResponseEntity<String> response2 = restTemplate.exchange("/auth/user/set-user-type", HttpMethod.POST, customRequestEntity, String.class);
-        assertThat(response2).isNotNull();
-        assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<String> response = restTemplate.exchange("/auth/user/set-user-type", HttpMethod.POST, customRequestEntity, String.class);
+        assertThat(response).isNotNull();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // Check if user is of type "premium"
         userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
