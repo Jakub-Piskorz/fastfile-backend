@@ -178,5 +178,17 @@ public class AuthControllerIT {
         userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
         assertNotNull(userDTO);
         assertThat(userDTO.userType()).isEqualTo("premium");
+
+        // Change back user type to "free"
+        userTypeDTO = new UserTypeDTO("free");
+        customRequestEntity = new HttpEntity<>(userTypeDTO, httpRequestEntity.getHeaders());
+        response = restTemplate.exchange("/auth/user/set-user-type", HttpMethod.POST, customRequestEntity, String.class);
+        assertThat(response).isNotNull();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Check if user is of type "free"
+        userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
+        assertNotNull(userDTO);
+        assertThat(userDTO.userType()).isEqualTo("free");
     }
 }
