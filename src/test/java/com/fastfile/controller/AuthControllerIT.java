@@ -4,6 +4,7 @@ import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
 import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.UserDTO;
+import com.fastfile.dto.UserTypeDTO;
 import com.fastfile.model.User;
 import com.fastfile.dto.UserLoginDTO;
 import com.fastfile.repository.UserRepository;
@@ -16,10 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.transaction.BeforeTransaction;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -59,9 +57,17 @@ public class AuthControllerIT {
     @Autowired
     private UserRepository userRepository;
 
+    private HttpEntity<Void> httpRequestEntity;
+
     @BeforeTransaction
     void beforeTransactionConfig() throws IOException {
         IntegrationTestSetup.beforeTransactionConfig(jdbcTemplate, userRepository, authService, jwtService);
+
+        // Login and set http request entity
+        String jwtToken = authService.authenticate("testUser", "secretPassword");
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + jwtToken);
+        httpRequestEntity = new HttpEntity<>(headers);
     }
 
     @AfterEach
@@ -74,16 +80,6 @@ public class AuthControllerIT {
         IntegrationTestSetup.afterAllConfig();
     }
     // END OF CONFIG
-
-    HttpEntity<Void> loginAndGetEntity() {
-        UserLoginDTO testUserLoginDTO = new UserLoginDTO("testUser", "secretPassword");
-        String jwtToken = restTemplate.postForObject("/auth/login", testUserLoginDTO, String.class);
-        assertThat(jwtToken).isNotNull();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer " + jwtToken);
-        return new HttpEntity<>(headers);
-    }
-
 
     @Transactional
     @Test
@@ -106,9 +102,9 @@ public class AuthControllerIT {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + jwtToken);
 
-        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        HttpEntity<Void> customRequestEntity = new HttpEntity<>(headers);
 
-        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, requestEntity, UserDTO.class).getBody();
+        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, customRequestEntity, UserDTO.class).getBody();
         assertThat(userDTO).isNotNull();
         assert userDTO != null;
         assertThat(userDTO.id()).isEqualTo(user.id());
@@ -120,9 +116,7 @@ public class AuthControllerIT {
     @Transactional
     @Test
     public void testUserLoginIT() {
-        var requestEntity = loginAndGetEntity();
-
-        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, requestEntity, UserDTO.class).getBody();
+        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
         assertThat(userDTO).isNotNull();
         assert userDTO != null;
 
@@ -142,9 +136,7 @@ public class AuthControllerIT {
     @Transactional
     @Test
     public void getCurrentUserIT() {
-        var requestEntity = loginAndGetEntity();
-
-        ResponseEntity<UserDTO> response = restTemplate.exchange("/auth/user", HttpMethod.GET, requestEntity, UserDTO.class);
+        ResponseEntity<UserDTO> response = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class);
         assertNotNull(response.getBody());
         UserDTO userDTO = response.getBody();
         assertNotNull(userDTO);
@@ -156,11 +148,10 @@ public class AuthControllerIT {
     @Transactional
     @Test
     public void deleteUserIT() {
-        var requestEntity = loginAndGetEntity();
         UserLoginDTO testUserLoginDTO = new UserLoginDTO("testUser", "secretPassword");
 
         // Delete user
-        Boolean deleted = restTemplate.exchange("/auth/delete-me", HttpMethod.DELETE, requestEntity, Boolean.class).getBody();
+        Boolean deleted = restTemplate.exchange("/auth/delete-me", HttpMethod.DELETE, httpRequestEntity, Boolean.class).getBody();
         assertThat(deleted).isTrue();
 
         // Try to log in deleted user
@@ -170,5 +161,22 @@ public class AuthControllerIT {
 
     @Transactional
     @Test
-    public void changeUserTypeIt() {}
+    public void setUserTypeIT() {
+        // Check if user is of type "free"
+        UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
+        assertNotNull(userDTO);
+        assertThat(userDTO.userType()).isEqualTo("free");
+
+        // Change user type to "premium"
+        UserTypeDTO userTypeDTO = new UserTypeDTO("premium");
+        HttpEntity<UserTypeDTO> customRequestEntity = new HttpEntity<>(userTypeDTO, httpRequestEntity.getHeaders());
+        ResponseEntity<String> response2 = restTemplate.exchange("/auth/user/set-user-type", HttpMethod.POST, customRequestEntity, String.class);
+        assertThat(response2).isNotNull();
+        assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Check if user is of type "premium"
+        userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
+        assertNotNull(userDTO);
+        assertThat(userDTO.userType()).isEqualTo("premium");
+    }
 }
