@@ -83,7 +83,7 @@ public class AuthControllerIT {
 
     @Transactional
     @Test
-    public void userAuthIT() {
+    public void registerIT() {
         UserDTO user = restTemplate.postForObject(
                 "/auth/register",
                 new User(env.ffUsername(), "test@test.com", "testFirstname", "testLastname", env.ffPassword()),
@@ -115,7 +115,7 @@ public class AuthControllerIT {
 
     @Transactional
     @Test
-    public void testUserLoginIT() {
+    public void loginIT() {
         UserDTO userDTO = restTemplate.exchange("/auth/user", HttpMethod.GET, httpRequestEntity, UserDTO.class).getBody();
         assertThat(userDTO).isNotNull();
         assert userDTO != null;
@@ -147,7 +147,7 @@ public class AuthControllerIT {
 
     @Transactional
     @Test
-    public void deleteUserIT() {
+    public void deleteMeIT() {
         UserLoginDTO testUserLoginDTO = new UserLoginDTO("testUser", "secretPassword");
 
         // Delete user
