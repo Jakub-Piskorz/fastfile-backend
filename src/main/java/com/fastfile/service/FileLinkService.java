@@ -74,13 +74,17 @@ public class FileLinkService {
             return null;
         }
 
+        List<FileLinkShare> shares = new ArrayList<>(List.of());
+
         // Create email shares in DB
         emails.forEach(email -> {
             FileLinkShare fileLinkShare = new FileLinkShare();
             fileLinkShare.setFileLinkUuid(fileLink.getUuid());
             fileLinkShare.setSharedUserEmail(email);
-            fileLinkShareRepository.save(fileLinkShare);
+            FileLinkShare share = fileLinkShareRepository.save(fileLinkShare);
+            shares.add(share);
         });
+        fileLink.setFileLinkShares(shares);
 
         return fileLink;
     }
@@ -115,7 +119,7 @@ public class FileLinkService {
         fileLinkShareRepository.deleteAll(sharesToRemove);
         fileLinkShareRepository.saveAll(sharesToAdd);
 
-        return fileLink;
+        return fileLinkRepository.findById(uuid).orElseThrow();
     }
 
     @Transactional

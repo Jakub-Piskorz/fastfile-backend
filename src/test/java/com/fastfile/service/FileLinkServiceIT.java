@@ -4,6 +4,7 @@ import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.model.FileLink;
+import com.fastfile.model.FileLinkShare;
 import com.fastfile.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterAll;
@@ -21,6 +22,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_DIR;
@@ -118,5 +120,33 @@ public class FileLinkServiceIT {
         FileLink fileLink = fileLinkService.createPublicFileLink(TEST_USER_DIR + "/nested/file3.txt");
         assertThat(fileLink).isNotNull();
         assertThat(fileLink.getPath()).isEqualTo(TEST_USER_DIR + "/nested/file3.txt");
+    }
+
+    @Transactional
+    @Test
+    void lookupPublicLink() throws IOException {
+        uploadSomeFiles();
+        FileLink fileLink = fileLinkService.createPublicFileLink(TEST_USER_DIR + "/nested/file3.txt");
+        FileDTO file = fileLinkService.lookupFile(fileLink.getUuid());
+        assertThat(file).isNotNull();
+        assertThat(file.fileLink()).isNotNull();
+        assertThat(file.fileLink().getPath()).isEqualTo(TEST_USER_DIR + "/nested/file3.txt");
+        assertThat(file.fileLink().getIsPublic()).isTrue();
+        assertThat(file.fileLink().getFileLinkShares()).isNull();
+    }
+
+    @Transactional
+    @Test
+    void createPrivateLink() throws IOException, InterruptedException {
+        uploadSomeFiles();
+        List<String> emails = List.of("example@example.com", "example2@example.com");
+        FileLink fileLink = fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/nested/file3.txt", emails);
+        assertThat(fileLink).isNotNull();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        List<FileLinkShare> shares = fileLink.getFileLinkShares();
+        assertThat(shares).isNotNull();
+        assertThat(shares).hasSize(2);
     }
 }
