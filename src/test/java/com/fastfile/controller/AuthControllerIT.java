@@ -86,7 +86,7 @@ public class AuthControllerIT {
     public void registerIT() {
         UserDTO user = restTemplate.postForObject(
                 "/auth/register",
-                new User(env.ffUsername(), "test@test.com", "testFirstname", "testLastname", env.ffPassword()),
+                new User("testUser2", "test2@test.com", "testFirstname", "testLastname", env.ffPassword()),
                 UserDTO.class);
         assertThat(user).isNotNull();
         assertThat(user.id()).isNotNull();
@@ -94,7 +94,7 @@ public class AuthControllerIT {
         assertThat(user.firstName()).isNotNull();
         assertThat(user.lastName()).isNotNull();
 
-        UserLoginDTO userLoginDTO = new UserLoginDTO(env.ffUsername(), env.ffPassword());
+        UserLoginDTO userLoginDTO = new UserLoginDTO("testUser2", env.ffPassword());
         String jwtToken = restTemplate.postForObject("/auth/login", userLoginDTO, String.class);
         assertThat(jwtToken.length()).isGreaterThan(0);
 

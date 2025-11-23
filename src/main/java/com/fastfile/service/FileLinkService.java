@@ -90,7 +90,7 @@ public class FileLinkService {
     }
 
     @Transactional
-    public FileLink updatePrivateLinkEmails(UUID uuid, Set<String> emails) {
+    public FileLink updatePrivateLinkEmails(UUID uuid, List<String> emails) {
         if (emails == null || uuid == null || uuid.toString().isEmpty() || emails.isEmpty()) return null;
 
         FileLink fileLink = fileLinkRepository.findById(uuid).orElse(null);
@@ -102,22 +102,33 @@ public class FileLinkService {
         Set<String> newEmails = new HashSet<>(emails);
         newEmails.removeAll(existingEmails);
 
+        List<FileLinkShare> _newShares = fileLink.getFileLinkShares();
+
         // Shares to add.
         Set<FileLinkShare> sharesToAdd = newEmails.stream().map(newEmail -> {
             FileLinkShare newShare = new FileLinkShare();
             newShare.setSharedUserEmail(newEmail);
             newShare.setFileLinkUuid(fileLink.getUuid());
+            _newShares.add(newShare);
             return newShare;
         }).collect(Collectors.toSet());
 
         // Shares to remove
         Set<FileLinkShare> sharesToRemove = existingShares.stream()
-                .filter(share -> !emails.contains(share.getSharedUserEmail()))
+                .filter(share -> {
+                    boolean forRemoval = !emails.contains(share.getSharedUserEmail());
+                    if (forRemoval) {
+                        _newShares.remove(share);
+                    }
+                    return forRemoval;
+                })
                 .collect(Collectors.toSet());
 
         // Execute adds and removals of fileLinkShares.
         fileLinkShareRepository.deleteAll(sharesToRemove);
         fileLinkShareRepository.saveAll(sharesToAdd);
+
+        fileLink.setFileLinkShares(_newShares);
 
         return fileLinkRepository.findById(uuid).orElseThrow();
     }

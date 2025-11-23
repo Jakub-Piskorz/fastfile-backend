@@ -11,7 +11,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 
@@ -62,7 +61,7 @@ public class FileShareController {
     }
 
     @PatchMapping("/{uuid}")
-    public ResponseEntity<FileLink> updateFileLink(@PathVariable(name = "uuid") UUID uuid, @RequestBody Set<String> emails) {
+    public ResponseEntity<FileLink> updateFileLink(@PathVariable(name = "uuid") UUID uuid, @RequestBody List<String> emails) {
         FileLink fileLink = fileLinkService.updatePrivateLinkEmails(uuid, emails);
         if (fileLink != null) {
             return ResponseEntity.ok().body(fileLink);

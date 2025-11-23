@@ -5,7 +5,9 @@ import com.fastfile.auth.JwtService;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
+import com.fastfile.repository.FileLinkRepository;
 import com.fastfile.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -22,8 +24,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_DIR;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +44,9 @@ public class FileLinkServiceIT {
     @Autowired
     private FileLinkService fileLinkService;
 
+    @Autowired
+    private EntityManager em;
+
     // CONFIG
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -51,6 +56,8 @@ public class FileLinkServiceIT {
     private AuthService authService;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private FileLinkRepository fileLinkRepository;
 
     @BeforeTransaction
     void beforeTransactionConfig() throws IOException {
@@ -137,16 +144,55 @@ public class FileLinkServiceIT {
 
     @Transactional
     @Test
-    void createPrivateLink() throws IOException, InterruptedException {
+    void createPrivateLink() throws IOException {
         uploadSomeFiles();
         List<String> emails = List.of("example@example.com", "example2@example.com");
         FileLink fileLink = fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/nested/file3.txt", emails);
         assertThat(fileLink).isNotNull();
 
-        TimeUnit.SECONDS.sleep(1);
-
         List<FileLinkShare> shares = fileLink.getFileLinkShares();
         assertThat(shares).isNotNull();
         assertThat(shares).hasSize(2);
+
+        fileLinkRepository.flush();
+        em.clear();
+
+        FileLink updatedFileLink = fileLinkRepository.findById(fileLink.getUuid()).orElse(null);
+        assertThat(updatedFileLink).isNotNull();
+        assertThat(updatedFileLink.getFileLinkShares()).hasSize(2);
+    }
+
+    @Transactional
+    @Test
+    void updatePrivateLink() throws IOException {
+        uploadSomeFiles();
+        List<String> emails = List.of("example@example.com", "example2@example.com");
+        FileLink fileLink = fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/nested/file3.txt", emails);
+
+        List<String> updatedEmails = List.of("different@different.com", "different2@different.com", "different3@different.com");
+        FileLink returnedFileLink = fileLinkService.updatePrivateLinkEmails(fileLink.getUuid(), updatedEmails);
+
+        // Check updated e-mails on returned link.
+        assertThat(returnedFileLink).isNotNull();
+        assertThat(returnedFileLink.getFileLinkShares()).isNotNull();
+        assertThat(returnedFileLink.getFileLinkShares()).hasSize(3);
+        List<String> emailsFromLink = returnedFileLink
+                .getFileLinkShares()
+                .stream()
+                .map(FileLinkShare::getSharedUserEmail)
+                .collect(Collectors.toList());
+        assertThat(emailsFromLink).isEqualTo(updatedEmails);
+
+        // Check again, but this time, load link from DB.
+        FileLink updatedFileLink = fileLinkRepository.findById(fileLink.getUuid()).orElse(null);
+        assertThat(updatedFileLink).isNotNull();
+        assertThat(updatedFileLink.getFileLinkShares()).isNotNull();
+        assertThat(updatedFileLink.getFileLinkShares()).hasSize(3);
+        emailsFromLink = updatedFileLink
+                .getFileLinkShares()
+                .stream()
+                .map(FileLinkShare::getSharedUserEmail)
+                .collect(Collectors.toList());
+        assertThat(emailsFromLink).isEqualTo(updatedEmails);
     }
 }
