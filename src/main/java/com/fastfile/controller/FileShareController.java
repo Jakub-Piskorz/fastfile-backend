@@ -46,8 +46,8 @@ public class FileShareController {
     }
 
     @GetMapping("/{uuid}")
-    public ResponseEntity<StreamingResponseBody> downloadLinkFile(@PathVariable(name = "uuid") UUID uuid) throws IOException {
-        return fileLinkService.downloadLinkFile(uuid);
+    public ResponseEntity<StreamingResponseBody> downloadFileFromLink(@PathVariable(name = "uuid") UUID uuid) throws IOException {
+        return fileLinkService.downloadFileFromLink(uuid);
     }
 
     @DeleteMapping("/{uuid}")

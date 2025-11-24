@@ -142,7 +142,7 @@ public class FileLinkService {
         return true;
     }
 
-    public ResponseEntity<StreamingResponseBody> downloadLinkFile(UUID uuid) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadFileFromLink(UUID uuid) throws IOException {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElseThrow();
         Path filePath = Paths.get(fileLink.getPath());
 

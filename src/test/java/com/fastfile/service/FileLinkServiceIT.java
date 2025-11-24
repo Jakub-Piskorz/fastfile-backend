@@ -11,13 +11,16 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.transaction.BeforeTransaction;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -29,6 +32,7 @@ import java.util.stream.Collectors;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_DIR;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 // Integration test for {@link FileService}
 @Testcontainers
@@ -194,5 +198,114 @@ public class FileLinkServiceIT {
                 .map(FileLinkShare::getSharedUserEmail)
                 .collect(Collectors.toList());
         assertThat(emailsFromLink).isEqualTo(updatedEmails);
+    }
+
+    @Transactional
+    @Test
+    void removeFileLink() throws IOException {
+        uploadSomeFiles();
+
+        FileLink fileLink = fileLinkService.createPublicFileLink(TEST_USER_DIR + "/file1.txt");
+        assertThat(fileLink).isNotNull();
+        assertThat(fileLink.getPath()).isEqualTo(TEST_USER_DIR + "/file1.txt");
+
+        FileDTO file = fileLinkService.lookupFile(fileLink.getUuid());
+        assertThat(file).isNotNull();
+        assertThat(file.fileLink().getIsPublic()).isTrue();
+        assertThat(file.fileLink().getFileLinkShares()).isNull();
+
+        boolean deleted = fileLinkService.removeFileLink(fileLink.getUuid());
+        assertThat(deleted).isTrue();
+
+        assertThrows(NoSuchElementException.class, () -> fileLinkService.lookupFile(fileLink.getUuid()));
+    }
+
+    @Transactional
+    @Test
+    void deletePrivateLink() throws IOException {
+        uploadSomeFiles();
+
+        List<String> emails = List.of("example@example.com", "example2@example.com");
+        FileLink fileLink = fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/file1.txt", emails);
+        assertThat(fileLink).isNotNull();
+        assertThat(fileLink.getPath()).isEqualTo(TEST_USER_DIR + "/file1.txt");
+        assertThat(fileLink.getFileLinkShares()).isNotNull();
+
+        FileDTO file = fileLinkService.lookupFile(fileLink.getUuid());
+        assertThat(file).isNotNull();
+        assertThat(file.fileLink().getIsPublic()).isFalse();
+        assertThat(file.fileLink().getFileLinkShares()).isNotNull();
+        assertThat(file.fileLink().getFileLinkShares()).hasSize(2);
+        List<String> emailsFromLink = file.fileLink().getFileLinkShares().stream().map(FileLinkShare::getSharedUserEmail).toList();
+        Assertions.assertEquals(emailsFromLink, emails);
+
+
+        boolean deleted = fileLinkService.removeFileLink(fileLink.getUuid());
+        assertThat(deleted).isTrue();
+
+        assertThrows(NoSuchElementException.class, () -> fileLinkService.lookupFile(fileLink.getUuid()));
+    }
+
+    @Test
+    @Transactional
+    void downloadLink() throws IOException {
+        uploadSomeFiles();
+
+        // Create public link
+        FileLink fileLink = fileLinkService.createPublicFileLink(TEST_USER_DIR + "/file1.txt");
+        assertThat(fileLink).isNotNull();
+        assertThat(fileLink.getPath()).isEqualTo(TEST_USER_DIR + "/file1.txt");
+
+        FileDTO file = fileLinkService.lookupFile(fileLink.getUuid());
+        assertThat(file).isNotNull();
+        assertThat(file.fileLink().getIsPublic()).isTrue();
+        assertThat(file.fileLink().getFileLinkShares()).isNull();
+
+        // Download file from link
+        ResponseEntity<StreamingResponseBody> response = fileLinkService.downloadFileFromLink(file.fileLink().getUuid());
+        assertThat(response.getStatusCode().toString()).isEqualTo("200 OK");
+        assertThat(response.getBody()).isNotNull();
+
+        assertThrows(NoSuchElementException.class, () -> fileLinkService.downloadFileFromLink(UUID.randomUUID()));
+    }
+
+    @Test
+    @Transactional
+    void myLinks() throws IOException {
+        uploadSomeFiles();
+
+        List<String> emails = List.of("example@example.com", "example2@example.com");
+
+        // Create public links
+        fileLinkService.createPublicFileLink(TEST_USER_DIR + "/file1.txt");
+        fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/file2.txt", emails);
+        fileLinkService.createPublicFileLink(TEST_USER_DIR + "/nested/file3.txt");
+
+        // Show my links
+        List<FileDTO> files = fileLinkService.myLinks();
+        assertThat(files).isNotNull();
+        assertThat(files).isNotEmpty();
+        assertThat(files).hasSize(3);
+        assertThat(files.get(2).metadata().name()).isEqualTo("file3.txt");
+    }
+
+    @Test
+    @Transactional
+    void linksSharedToMe() throws IOException {
+        uploadSomeFiles();
+
+        List<String> emails = List.of("example@example.com", "example2@example.com");
+
+        // Create public links
+        fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/file1.txt", emails);
+        fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/file2.txt", emails);
+        fileLinkService.createPrivateFileLink(TEST_USER_DIR + "/nested/file3.txt", emails);
+
+        // Show links shared with me
+        List<FileDTO> files = fileLinkService.linksSharedToMe();
+        assertThat(files).isNotNull();
+        assertThat(files).isNotEmpty();
+        assertThat(files).hasSize(3);
+        assertThat(files.get(2).metadata().name()).isEqualTo("file3.txt");
     }
 }
