@@ -2,6 +2,7 @@ package com.fastfile.service;
 
 import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
@@ -26,11 +27,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_DIR;
+import static com.fastfile.IntegrationTestSetup.TEST_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
@@ -75,7 +79,8 @@ public class FileLinkServiceIT {
 
     @AfterAll
     static void afterAllConfig() throws IOException {
-        IntegrationTestSetup.afterAllConfig();
+        Path testUserDir = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
+        IntegrationTestSetup.afterAllConfig(testUserDir);
     }
     // END OF CONFIG
 

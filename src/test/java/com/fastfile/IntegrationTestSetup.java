@@ -1,6 +1,7 @@
 package com.fastfile;
 
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.repository.UserRepository;
 import com.fastfile.service.AuthService;
 import io.jsonwebtoken.Claims;
@@ -22,12 +23,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.fastfile.service.FileSystemService.FILES_ROOT;
-
 public class IntegrationTestSetup {
 
     public static final Long TEST_USER_ID = -1L;
-    public static final Path TEST_USER_DIR = Paths.get(FILES_ROOT, TEST_USER_ID.toString());
+    public static final Path TEST_USER_DIR = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
     public static final String TEST_USERNAME = "testUser";
     public static final String TEST_PASSWORD = "secretPassword";
 
@@ -63,10 +62,11 @@ public class IntegrationTestSetup {
         }
     }
 
-    public static void afterAllConfig() throws IOException {
+    // Can't use TEST_USER_DIR in static classes.
+    public static void afterAllConfig(Path testUserDir) throws IOException {
         // Remove user directory with everything inside
-        if (Files.exists(TEST_USER_DIR)) {
-            try (Stream<Path> filesStream = Files.walk(TEST_USER_DIR)) {
+        if (Files.exists(testUserDir)) {
+            try (Stream<Path> filesStream = Files.walk(testUserDir)) {
                 filesStream.sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(file -> {

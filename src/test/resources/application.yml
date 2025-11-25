@@ -22,3 +22,6 @@ storage:
   limits:
     free: 21474836480     # 20 GB in bytes
     premium: 107374182400 # 100 GB in bytes
+
+files:
+  root-dir: "files-test/"

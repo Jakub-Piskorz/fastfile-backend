@@ -25,9 +25,7 @@ import java.util.stream.Stream;
 
 @Service
 public class FileSystemService {
-
-    public static final String FILES_ROOT = "files/";
-    private final FileLinkRepository fileLinkRepository;
+        private final FileLinkRepository fileLinkRepository;
 
     public FileSystemService(FileLinkRepository fileLinkRepository) {
         this.fileLinkRepository = fileLinkRepository;

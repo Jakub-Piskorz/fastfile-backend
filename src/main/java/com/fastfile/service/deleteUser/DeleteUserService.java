@@ -1,5 +1,6 @@
 package com.fastfile.service.deleteUser;
 
+import com.fastfile.config.FilesConfig;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
 import com.fastfile.model.User;
@@ -15,8 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
-
-import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class DeleteUserService {
@@ -38,7 +37,7 @@ public class DeleteUserService {
     }
 
     public boolean deleteUser(User user) {
-        Path userPath = Paths.get(FILES_ROOT, user.getId().toString()).toAbsolutePath();
+        Path userPath = Paths.get(FilesConfig.FILES_ROOT, user.getId().toString()).toAbsolutePath();
         boolean myPathExists = Files.exists(userPath);
         if (myPathExists) {
             fileSystemService.deleteRecursively(userPath);

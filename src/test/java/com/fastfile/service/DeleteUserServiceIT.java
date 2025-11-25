@@ -2,6 +2,7 @@ package com.fastfile.service;
 
 import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import com.fastfile.service.deleteUser.DeleteUserService;
@@ -19,6 +20,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.*;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +67,8 @@ public class DeleteUserServiceIT {
 
     @AfterAll
     static void afterAllConfig() throws IOException {
-        IntegrationTestSetup.afterAllConfig();
+        Path testUserDir = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
+        IntegrationTestSetup.afterAllConfig(testUserDir);
     }
     // END OF CONFIG
 

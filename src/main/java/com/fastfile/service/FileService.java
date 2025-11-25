@@ -1,5 +1,6 @@
 package com.fastfile.service;
 
+import com.fastfile.config.FilesConfig;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.model.FileLink;
@@ -29,8 +30,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class FileService {
@@ -143,7 +142,7 @@ public class FileService {
         if (filePaths.filePaths().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        Path tempPath = Paths.get(FILES_ROOT + LocalTime.now().toString().replaceAll("[:.]", "-")).toAbsolutePath();
+        Path tempPath = Paths.get(FilesConfig.FILES_ROOT + LocalTime.now().toString().replaceAll("[:.]", "-")).toAbsolutePath();
         String zipFileName = "/download.zip";
         Files.createDirectory(tempPath);
 

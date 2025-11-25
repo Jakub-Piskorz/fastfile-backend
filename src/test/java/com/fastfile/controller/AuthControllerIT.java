@@ -2,6 +2,7 @@ package com.fastfile.controller;
 
 import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.config.GlobalVariables;
 import com.fastfile.dto.UserDTO;
 import com.fastfile.dto.UserTypeDTO;
@@ -25,6 +26,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static com.fastfile.IntegrationTestSetup.TEST_USER_ID;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -77,7 +80,8 @@ public class AuthControllerIT {
 
     @AfterAll
     static void afterAllConfig() throws IOException {
-        IntegrationTestSetup.afterAllConfig();
+        Path testUserDir = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
+        IntegrationTestSetup.afterAllConfig(testUserDir);
     }
     // END OF CONFIG
 

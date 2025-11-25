@@ -1,5 +1,6 @@
 package com.fastfile.service;
 
+import com.fastfile.config.FilesConfig;
 import com.fastfile.dto.UserDTO;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
@@ -13,8 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
-import static com.fastfile.service.FileSystemService.FILES_ROOT;
 
 @Service
 public class UserService {
@@ -36,7 +35,7 @@ public class UserService {
     public UserDTO register(User user) throws IOException {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user = userRepository.save(user);
-        Files.createDirectories(Paths.get(FILES_ROOT + "/" + user.getId()));
+        Files.createDirectories(Paths.get(FilesConfig.FILES_ROOT + "/" + user.getId()));
         return new UserDTO(user);
     }
 
@@ -103,7 +102,7 @@ public class UserService {
         }
 
         Long userId = authService.getMyUserId();
-        return Paths.get(FILES_ROOT + userId + "/" + directory);
+        return Paths.get(FilesConfig.FILES_ROOT + userId + "/" + directory);
     }
 
     public Path getMyUserPath() {

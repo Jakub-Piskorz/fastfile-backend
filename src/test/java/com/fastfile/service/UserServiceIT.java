@@ -2,6 +2,7 @@ package com.fastfile.service;
 
 import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.model.User;
 import com.fastfile.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -18,6 +19,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 import static com.fastfile.IntegrationTestSetup.*;
@@ -57,7 +60,8 @@ public class UserServiceIT {
 
     @AfterAll
     static void afterAllConfig() throws IOException {
-        IntegrationTestSetup.afterAllConfig();
+        Path testUserDir = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
+        IntegrationTestSetup.afterAllConfig(testUserDir);
     }
     // END OF CONFIG
 

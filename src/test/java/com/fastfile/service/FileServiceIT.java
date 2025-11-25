@@ -2,6 +2,7 @@ package com.fastfile.service;
 
 import com.fastfile.IntegrationTestSetup;
 import com.fastfile.auth.JwtService;
+import com.fastfile.config.FilesConfig;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.model.User;
@@ -70,7 +71,8 @@ public class FileServiceIT {
 
     @AfterAll
     static void afterAllConfig() throws IOException {
-        IntegrationTestSetup.afterAllConfig();
+        Path testUserDir = Paths.get(FilesConfig.FILES_ROOT, TEST_USER_ID.toString());
+        IntegrationTestSetup.afterAllConfig(testUserDir);
     }
     // END OF CONFIG
 
