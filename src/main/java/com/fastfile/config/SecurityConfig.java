@@ -43,10 +43,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((a) -> a
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
-                        .requestMatchers("/auth/register").permitAll()
-                        .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers("/").permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/test/**")).permitAll()
+                        .requestMatchers("/", "/auth/register", "/auth/login").permitAll() // unsecured endpoints
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll() // swagger endpoints
+                        .requestMatchers(new AntPathRequestMatcher("/test/**")).permitAll() // for testing TODO: remove
                         .anyRequest()
                         .authenticated()
                 )
