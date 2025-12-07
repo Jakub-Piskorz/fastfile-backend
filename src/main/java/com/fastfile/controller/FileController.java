@@ -4,7 +4,6 @@ import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.SearchFileDTO;
 import com.fastfile.service.FileService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,28 +12,19 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/files")
 public class FileController {
-    public static final String FILES_ENDPOINT = "/api/v1/files";
-
     private final FileService fileService;
 
     public FileController(FileService fileService) {
         this.fileService = fileService;
     }
 
-    public static String decodeURL(HttpServletRequest request, String path) {
-        return URLDecoder.decode(request.getRequestURI().substring((FILES_ENDPOINT + path).length()), StandardCharsets.UTF_8);
-    }
-
-    @GetMapping("/list/**")
-    public ResponseEntity<List<FileDTO>> filesInDirectory(HttpServletRequest request) throws IOException {
-        var path = decodeURL(request, "/list/");
+    @GetMapping("/list/{*path}")
+    public ResponseEntity<List<FileDTO>> filesInDirectory(@PathVariable("path") String path) throws IOException {
         List<FileDTO> files = fileService.filesInMyDirectory(path);
         return new ResponseEntity<>(files, HttpStatus.OK);
     }
@@ -45,9 +35,8 @@ public class FileController {
         return new ResponseEntity<>(files, HttpStatus.OK);
     }
 
-    @GetMapping("/download/**")
-    public ResponseEntity<StreamingResponseBody> downloadFile(HttpServletRequest request) throws IOException {
-        var path = decodeURL(request, "/download/");
+    @GetMapping("/download/{*path}")
+    public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable("path") String path) throws IOException {
         return fileService.downloadFile(path);
     }
 
@@ -69,17 +58,15 @@ public class FileController {
         }
     }
 
-    @DeleteMapping("/delete/**")
-    public ResponseEntity<String> removeFile(HttpServletRequest request) throws Exception {
-        var filePath = decodeURL(request, "/delete/");
-        fileService.delete(filePath);
+    @DeleteMapping("/delete/{*path}")
+    public ResponseEntity<String> removeFile(@PathVariable("path") String path) throws Exception {
+        fileService.delete(path);
         return new ResponseEntity<>("Successfully deleted file.", HttpStatus.OK);
     }
 
-    @DeleteMapping("/delete-recursively/**")
-    public ResponseEntity<String> deleteRecursively(HttpServletRequest request) {
-        var filePath = decodeURL(request, "/delete-recursively/");
-        boolean result = fileService.deleteRecursively(filePath);
+    @DeleteMapping("/delete-recursively/{*path}")
+    public ResponseEntity<String> deleteRecursively(@PathVariable("path") String path) {
+        boolean result = fileService.deleteRecursively(path);
         if (result) {
             return new ResponseEntity<>("Successfully deleted file or folder.", HttpStatus.OK);
         } else {
@@ -87,10 +74,9 @@ public class FileController {
         }
     }
 
-    @GetMapping("/create-directory/**")
-    public ResponseEntity<String> createDirectory(HttpServletRequest request) throws Exception {
-        var filePath = decodeURL(request, "/create-directory/");
-        String errorMsg = fileService.createMyPersonalDirectory(filePath);
+    @GetMapping("/create-directory/{*path}")
+    public ResponseEntity<String> createDirectory(@PathVariable("path") String path) throws Exception {
+        String errorMsg = fileService.createMyPersonalDirectory(path);
         if (errorMsg == null) {
             return new ResponseEntity<>("Successfully created directory.", HttpStatus.OK);
         } else {
