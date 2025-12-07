@@ -13,6 +13,7 @@ dependency-reduced-pom.xml
 *.sublime-*
 /scratch
 files
+files-test
 .gradle
 README.html
 .idea
