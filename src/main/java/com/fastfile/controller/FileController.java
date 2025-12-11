@@ -41,7 +41,7 @@ public class FileController {
     }
 
     @PostMapping("/download-multiple")
-    public ResponseEntity<StreamingResponseBody> downloadFile(@RequestBody FilePathsDTO filePaths) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadMultiple(@RequestBody FilePathsDTO filePaths) throws IOException {
         return fileService.downloadMultiple(filePaths);
     }
 
