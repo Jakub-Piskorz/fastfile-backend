@@ -5,6 +5,7 @@ import com.fastfile.dto.PrivateFileLinkDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.service.FileLinkService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -25,7 +26,7 @@ public class FileShareController {
         this.fileLinkService = fileLinkService;
     }
 
-    @PostMapping("create")
+    @PostMapping(path = "create", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<FileLink> shareFileLink(@RequestBody String filePath) {
         FileLink fileLink = fileLinkService.createPublicFileLink(filePath);
         if (fileLink != null) {
