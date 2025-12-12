@@ -13,13 +13,18 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtService jwtService;
+
+    private static final String[] PUBLIC_PATHS_SECURITY = {"/", "/auth/login", "/auth/register", "/swagger-ui/**", "/v3/api-docs/**"};
+    private static final List<String> PUBLIC_PATHS_FILTER = List.of("/auth/login", "/auth/register", "/swagger-ui", "/v3/api-docs");
+
 
     public SecurityConfig(JwtService jwtService) {
         this.jwtService = jwtService;
@@ -38,18 +43,14 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((a) -> a
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
-                        .requestMatchers("/", "/auth/register", "/auth/login").permitAll() // unsecured endpoints
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll() // swagger endpoints
-                        .requestMatchers(new AntPathRequestMatcher("/test/**")).permitAll() // for testing TODO: remove
-                        .anyRequest()
-                        .authenticated()
+                        .requestMatchers(PUBLIC_PATHS_SECURITY).permitAll() // not authenticated endpoints
+                        .anyRequest().authenticated() // authenticated endpoints
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);  // Add JWT authentication filter before the default authentication filter
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, PUBLIC_PATHS_FILTER), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
