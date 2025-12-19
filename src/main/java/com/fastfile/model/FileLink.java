@@ -38,4 +38,7 @@ public class FileLink {
     @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "file_link_uuid", referencedColumnName = "uuid")
     private List<FileLinkShare> fileLinkShares;
+
+    @Column(name = "owner_id", insertable = false, updatable = false)
+    private Long ownerId;
 }
