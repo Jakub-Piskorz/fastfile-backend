@@ -6,7 +6,9 @@ import com.fastfile.config.FilesConfig;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.model.FileLink;
 import com.fastfile.model.FileLinkShare;
+import com.fastfile.model.User;
 import com.fastfile.repository.FileLinkRepository;
+import com.fastfile.repository.FileLinkShareRepository;
 import com.fastfile.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -20,6 +22,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -66,6 +69,8 @@ public class FileLinkServiceIT {
     private UserRepository userRepository;
     @Autowired
     private FileLinkRepository fileLinkRepository;
+    @Autowired
+    private FileLinkShareRepository fileLinkShareRepository;
 
     @BeforeTransaction
     void beforeTransactionConfig() throws IOException {
@@ -249,6 +254,49 @@ public class FileLinkServiceIT {
         assertThat(deleted).isTrue();
 
         assertThrows(NoSuchElementException.class, () -> fileLinkService.lookupFile(fileLink.getUuid()));
+    }
+
+    @Transactional
+    @Test
+    void throwOnModifyingSomeoneElseLink() {
+
+        // Add new user
+        User secondUser = new User("testUser2", "example2@example.com", "firstName", "lastName", "password");
+        userRepository.saveAndFlush(secondUser);
+        User secondUserFromRepo = userRepository.findById(secondUser.getId()).orElse(null);
+        assertThat(secondUserFromRepo).isNotNull();
+        assertThat(secondUserFromRepo.getUsername()).isEqualTo("testUser2");
+
+        // Create new private file link of second user
+        Path secondUserDir = Paths.get(FilesConfig.FILES_ROOT, secondUserFromRepo.getId().toString());
+        UUID uuid = UUID.randomUUID();
+        FileLink fileLink = new FileLink(uuid, secondUser, secondUserDir + "/fake-file.txt", false);
+
+        fileLinkRepository.saveAndFlush(fileLink);
+
+        FileLink fileLinkFromRepo = fileLinkRepository.findById(fileLink.getUuid()).orElse(null);
+        assertThat(fileLinkFromRepo).isNotNull();
+        assertThat(fileLinkFromRepo.getOwner().getId()).isEqualTo(secondUser.getId());
+
+        // Add share to that private link
+        FileLinkShare share = new FileLinkShare(uuid, "example@example.com");
+        fileLinkShareRepository.saveAndFlush(share);
+        Set<FileLinkShare> sharesFromRepo = fileLinkShareRepository.findAllByFileLinkUuid(uuid);
+        assertThat(sharesFromRepo).isNotNull();
+        assertThat(sharesFromRepo).hasSize(1);
+
+        FileLinkShare shareFromRepo = null;
+        for (FileLinkShare shr : sharesFromRepo) {
+            shareFromRepo = shr;
+        }
+
+        assertThat(shareFromRepo).isNotNull();
+        assertThat(shareFromRepo.getFileLinkUuid()).isEqualTo(uuid);
+
+        // Try to update/remove link of second user. Throw, because I'm not logged as them.
+        assertThrows(AccessDeniedException.class, () -> fileLinkService.removeFileLink(fileLinkFromRepo.getUuid()));
+        assertThrows(AccessDeniedException.class, () -> fileLinkService.updatePrivateLinkEmails(
+                fileLinkFromRepo.getUuid(), List.of("different@mail.com", "different2@mail.com")));
     }
 
     @Test

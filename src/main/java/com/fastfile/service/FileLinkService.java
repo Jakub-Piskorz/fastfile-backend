@@ -11,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -96,6 +97,10 @@ public class FileLinkService {
         FileLink fileLink = fileLinkRepository.findById(uuid).orElse(null);
         if (fileLink == null) return null;
 
+        if (!fileLink.getOwner().equals(userService.getMe())) {
+            throw new AccessDeniedException("You are not the owner of the file link");
+        }
+
         Set<FileLinkShare> existingShares = fileLinkShareRepository.findAllByFileLinkUuid(fileLink.getUuid());
         Set<String> existingEmails = existingShares.stream().map(FileLinkShare::getSharedUserEmail).collect(Collectors.toSet());
 
@@ -137,6 +142,9 @@ public class FileLinkService {
     public boolean removeFileLink(UUID uuid) {
         FileLink linkToRemove = fileLinkRepository.findById(uuid).orElse(null);
         if (linkToRemove == null) return false;
+        if (!linkToRemove.getOwner().equals(userService.getMe())) {
+            throw new AccessDeniedException("You are not the owner of the file link");
+        }
         if (!linkToRemove.getIsPublic()) fileLinkShareRepository.deleteAllByFileLinkUuid(linkToRemove.getUuid());
         fileLinkRepository.delete(linkToRemove);
         return true;
