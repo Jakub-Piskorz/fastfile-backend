@@ -1,5 +1,6 @@
 package com.fastfile.controller;
 
+import com.fastfile.dto.DeleteFileDTO;
 import com.fastfile.dto.FileDTO;
 import com.fastfile.dto.FilePathsDTO;
 import com.fastfile.dto.SearchFileDTO;
@@ -54,24 +55,17 @@ public class FileController {
         if (success) {
             return new ResponseEntity<>("Successfully uploaded file.", HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Couldn't upload file", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Couldn't upload file.", HttpStatus.BAD_REQUEST);
         }
     }
 
-    @DeleteMapping("/delete/{*path}")
-    public ResponseEntity<String> removeFile(@PathVariable("path") String path) throws Exception {
-        fileService.delete(path);
-        return new ResponseEntity<>("Successfully deleted file.", HttpStatus.OK);
-    }
-
-    @DeleteMapping("/delete-recursively/{*path}")
-    public ResponseEntity<String> deleteRecursively(@PathVariable("path") String path) {
-        boolean result = fileService.deleteRecursively(path);
-        if (result) {
-            return new ResponseEntity<>("Successfully deleted file or folder.", HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("Couldn't deleted file or folder.", HttpStatus.BAD_REQUEST);
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> removeFile(@RequestBody DeleteFileDTO dto) throws Exception {
+        boolean success = fileService.delete(dto.path(), dto.recursive());
+        if (success) {
+            return new ResponseEntity<>("Successfully deleted file.", HttpStatus.OK);
         }
+        return new ResponseEntity<>("Couldn't delete file.", HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping("/create-directory/{*path}")

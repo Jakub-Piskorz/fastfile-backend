@@ -42,12 +42,18 @@ public class FileSystemService {
         if (isDirectory) {
             hasFiles = !isEmpty(path);
         }
+
+        Path subPath = path.getNameCount() > 1
+                ? path.subpath(1, path.getNameCount())
+                : path;
+
         return new FileMetadata(
                 path.getFileName().toString(),
                 Files.size(path),
                 attrs.lastModifiedTime().toMillis(),
                 isDirectory ? "directory" : "file",
-                path.toString(), hasFiles
+                subPath.toString(),
+                hasFiles
         );
     }
 

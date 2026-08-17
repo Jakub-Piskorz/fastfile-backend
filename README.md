@@ -48,9 +48,8 @@ FastFile is a Spring Boot-based cloud file storage backend that supports file up
 | GET    | `/api/v1/files/search/**`             | Search files by name           |
 | GET    | `/api/v1/files/download/**`           | Download a file                |
 | POST   | `/api/v1/files/upload`                | Upload a file (multipart)      |
-| DELETE | `/api/v1/files/delete/**`             | Delete a file                  |
+| DELETE | `/api/v1/files/delete`                | Delete a file                  |
 | POST   | `/api/v1/files/create-directory/**`   | Create a new directory         |
-| DELETE | `/api/v1/files/delete-recursively/**` | Delete a directory recursively |
 
 ---
 

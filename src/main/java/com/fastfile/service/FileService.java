@@ -191,7 +191,8 @@ public class FileService {
         return ResponseEntity.ok().headers(zippedFile.headers()).body(zippedFile.body());
     }
 
-    public void delete(String filePath) throws IOException, NullPointerException {
+    public boolean delete(String filePath, boolean recursive) throws IOException {
+        if (recursive) return this.deleteRecursively(filePath);
         Path path = userService.getMyUserPath(filePath).normalize();
         Set<FileLink> fileLinks = fileLinkRepository.findAllByPath(path.toString());
 
@@ -208,6 +209,11 @@ public class FileService {
 
         Files.delete(path);
         updateMyUserStorage();
+        return true;
+    }
+
+    public boolean delete(String filePath) throws IOException {
+        return this.delete(filePath, false);
     }
 
     public List<FileDTO> searchFiles(String fileName, String directory) throws IOException {
