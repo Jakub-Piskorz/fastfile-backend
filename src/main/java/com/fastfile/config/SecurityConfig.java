@@ -64,11 +64,7 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "https://localhost:8081",
-                "http://localhost:8081",
-                "https://localhost:5173",
-                "http://localhost:5173",
-                "https://jakubpiskorz.dev",
-                "https://jakubpiskorz.dev:8080"
+                "https://jakubpiskorz.dev"
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
