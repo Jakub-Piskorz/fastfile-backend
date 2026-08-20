@@ -123,5 +123,6 @@ Used only in Integration tests:
 
 ## 🛠️ Configuring HTTPS
 
-Put `keystore.p12` file inside `src/main/resources/` folder and add `var_keystorePass` as your keystore password to environment variables
+Put `keystore.p12` file for PROD and `keystore-local.p12` for DEV, inside `src/main/resources/` folder and set up your `var_keystorePass` environment variable for keystore password.
+For
 
